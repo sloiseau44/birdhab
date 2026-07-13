@@ -45,6 +45,12 @@ Un service = un contexte borné, pas de dépendance directe entre services (pass
 
 Tout le reste (v2+, Enterprise) est hors scope tant que non demandé explicitement — voir `CONTEXT.md`.
 
+## Contrats API
+
+`docs/api/auth.yaml` : contrat OpenAPI du service `auth` (register, login, refresh,
+logout, me). À respecter strictement lors de l'implémentation des controllers —
+ne pas ajouter d'endpoint ou de champ non prévu sans mettre à jour le contrat en premier.
+
 ## Environnement local
 
 `docker/docker-compose.yml` fournit PostgreSQL + MinIO pour le développement local.
