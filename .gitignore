@@ -1,25 +1,43 @@
-# Java / Maven
+# Build
 target/
 *.class
 *.jar
 *.war
+!.mvn/wrapper/maven-wrapper.jar
 
-IDE
+# Maven wrapper (garder le .properties, ignorer le reste si non versionné volontairement)
+.mvn/timing.properties
+
+# IDE
 .idea/
 *.iml
+*.iws
 .vscode/
-.eclipse/
+.settings/
+.classpath
+.project
+.factorypath
 
-Env
-.env
-*.env.local
-application-local.yml
-application-*.yml
-!application.yml
-
-Docker
-docker/data/
-
-OS
+# OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environnement / secrets
+.env
+.env.local
+application-local.yml
+application-secrets.yml
+*.pem
+*.key
+
+# Docker
+docker/**/data/
+
+# Divers
+*.tmp
+*.bak
+.history/

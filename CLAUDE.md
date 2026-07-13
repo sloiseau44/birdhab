@@ -45,6 +45,18 @@ Un service = un contexte borné, pas de dépendance directe entre services (pass
 
 Tout le reste (v2+, Enterprise) est hors scope tant que non demandé explicitement — voir `CONTEXT.md`.
 
+## Prochaine tâche pour Claude Code
+
+Le squelette Maven du service `auth` est en place (pom.xml, application.yml,
+classe principale, entités JPA, migration Flyway V1). Reste à implémenter,
+en respectant strictement `docs/api/auth.yaml` :
+- Repositories Spring Data JPA (`UserRepository`, `RoleRepository`, `RefreshTokenRepository`)
+- Service d'authentification (hash BCrypt, génération/validation JWT avec jjwt)
+- Configuration Spring Security (filtre JWT, `SecurityFilterChain`)
+- Controllers REST + DTOs (records) pour `/auth/register`, `/auth/login`,
+  `/auth/refresh`, `/auth/logout`, `/auth/me`
+- Tests JUnit 5 + Mockito (viser 80% de couverture)
+
 ## Contrats API
 
 `docs/api/auth.yaml` : contrat OpenAPI du service `auth` (register, login, refresh,

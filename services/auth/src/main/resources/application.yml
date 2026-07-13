@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: auth-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/birdhab
+    username: birdhab
+    password: birdhab
+
+  jpa:
+    hibernate:
+      ddl-auto: validate   # le schéma est piloté par Flyway, jamais par Hibernate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8081
+
+# Config JWT — à surcharger via variables d'environnement en dehors du local
+birdhab:
+  jwt:
+    secret: ${JWT_SECRET:changeme-local-dev-secret-key-not-for-production-use-only}
+    access-token-expiration-ms: 900000      # 15 minutes
+    refresh-token-expiration-ms: 2592000000 # 30 jours
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
