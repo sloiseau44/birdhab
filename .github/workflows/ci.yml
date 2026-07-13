@@ -8,16 +8,46 @@ on:
 
 jobs:
   build:
+    name: Build & Test
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: birdhab
+          POSTGRES_PASSWORD: birdhab
+          POSTGRES_DB: birdhab
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U birdhab -d birdhab"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
-      - name: Setup Java 21
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Configurer le JDK 21 (Temurin)
         uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '21'
-          distribution: 'temurin'
+          cache: maven
 
-      - name: Build
-        run: echo "CI OK - pas encore de code Java"
+      - name: Build & tests (mvn verify)
+        run: mvn --batch-mode --update-snapshots verify
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/birdhab
+          SPRING_DATASOURCE_USERNAME: birdhab
+          SPRING_DATASOURCE_PASSWORD: birdhab
+
+      - name: Publier les rapports de tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/target/surefire-reports/*.xml'
+          retention-days: 7
