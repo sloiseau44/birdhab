@@ -102,6 +102,14 @@ birdhab/
 - Notifications email automatiques
 - Encadrement des loyers
 - Intégrations comptables (Pennylane, Dolibarr)
+- **Portail locataire** : le locataire dispose de son propre compte (rôle `TENANT`,
+  déjà prévu dans le modèle auth) pour accéder à son espace personnel :
+  - Consultation et dépôt de documents liés à son bail (service `document`,
+    avec règles d'autorisation restreignant l'accès à ses seuls documents)
+  - Messagerie directe avec son propriétaire (nouveau microservice `messaging`
+    envisagé, plutôt que de le rattacher à `tenant` ou `document`)
+  - Compte créé par invitation du propriétaire (email), lié à sa fiche
+    `Tenant` existante via une référence `tenant_id` sur `User`
 
 ### Version Enterprise (payante — après sortie d'Atos)
 
