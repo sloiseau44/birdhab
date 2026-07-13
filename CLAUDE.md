@@ -45,6 +45,13 @@ Un service = un contexte borné, pas de dépendance directe entre services (pass
 
 Tout le reste (v2+, Enterprise) est hors scope tant que non demandé explicitement — voir `CONTEXT.md`.
 
+## Environnement local
+
+`docker/docker-compose.yml` fournit PostgreSQL + MinIO pour le développement local.
+Lancer avec `cd docker && docker compose up -d`. Détails et identifiants dans `docker/README.md`.
+Chaque service applicatif tourne en direct (pas dans Docker) et se connecte à cette infra
+via un profil `local` (`application-local.yml`).
+
 ## Licence
 
 BUSL-1.1. Ne pas ajouter de dépendance dont la licence serait incompatible avec un usage
