@@ -1,0 +1,160 @@
+# Birdhab — Contexte du projet
+
+> Ce fichier centralise toutes les décisions techniques et fonctionnelles du projet.
+> Il doit être mis à jour à chaque décision importante et committé dans le repo.
+> Dernière mise à jour : juillet 2026
+
+---
+
+## Vision du projet
+
+**Birdhab** est une application de gestion locative tout-en-un pour propriétaires particuliers.
+
+- **Cible** : Propriétaires bailleurs (1 à 10 biens) qui veulent fuir Excel
+- **Types de biens** : Logements, parkings, commerces
+- **Zone géographique** : France uniquement (loi Alur, IRL, bail type, quittances légales, encadrement des loyers)
+- **Modèle** : Open-core, code public GitHub, zéro SaaS à héberger
+- **Licence** : Business Source License 1.1 (BUSL-1.1)
+  - Usage commercial interdit sans permission
+  - Change Date : 2029-01-01 → bascule en Apache 2.0
+  - Contact commercial : stephaneloiseau44@gmail.com
+
+---
+
+## Objectifs du développeur
+
+1. **Book technique** — vitrine pour recruteurs, secteur défense Côte d'Azur
+2. **Montée en compétence** — Java 21, Spring Boot 3, microservices
+3. **Revenus** — si ça décolle après la situation professionnelle actuelle
+4. **Utilisateurs** — viendra naturellement si les deux premiers sont bien faits
+
+---
+
+## Contraintes légales importantes
+
+- Développeur actuellement en CDI chez **Atos** (Ingénieur Développement, depuis juillet 2024)
+- Contrat soumis à la **Convention SYNTEC**
+- **Article 14 — Clause d'exclusivité** : interdiction d'exercer toute activité professionnelle complémentaire sans accord écrit de la direction
+- **Article 13 — Propriété intellectuelle** : les logiciels créés dans l'exercice des fonctions Atos appartiennent à Atos (Birdhab n'est pas concerné car sans lien avec le travail chez Atos)
+- ✅ Développement personnel sur temps libre = OK
+- ✅ Code public GitHub sans revenus = OK
+- ❌ Commercialisation tant que CDI Atos en cours = à éviter
+- ❌ Structure juridique = à éviter pour l'instant
+
+---
+
+## Stack technique
+
+| Composant | Technologie |
+|---|---|
+| Langage | Java 21 (records, virtual threads, pattern matching) |
+| Framework | Spring Boot 3 |
+| Sécurité | Spring Security + JWT + OAuth2 |
+| Base de données | PostgreSQL |
+| Stockage fichiers | MinIO (souverain, alternative S3) |
+| Containerisation | Docker |
+| CI/CD | GitHub Actions |
+| Architecture | Microservices |
+| Documentation API | OpenAPI / Swagger |
+
+---
+
+## Architecture — Microservices
+
+```
+birdhab/
+├── services/
+│   ├── auth/          # Authentification, JWT, rôles, utilisateurs
+│   ├── property/      # Biens immobiliers
+│   ├── tenant/        # Locataires
+│   ├── document/      # Documents, contrats, quittances PDF
+│   ├── payment/       # Paiements, loyers, relances
+│   └── gateway/       # API Gateway (point d'entrée unique)
+├── shared/
+│   └── common/        # Code partagé entre services
+├── docker/            # Configuration Docker / Docker Compose
+├── docs/
+│   └── api/           # Contrats OpenAPI
+└── .github/
+    └── workflows/
+        └── ci.yml     # CI GitHub Actions (Java 21 Temurin, main + develop)
+```
+
+---
+
+## Périmètre fonctionnel
+
+### MVP (v1) — À développer en priorité
+
+| Module | Fonctionnalités |
+|---|---|
+| **Gestion des biens** | Ajouter/modifier un bien (adresse, type, surface, loyer de référence) |
+| **Gestion des locataires** | Fiche locataire, coordonnées, documents d'identité |
+| **Gestion des baux** | Création de bail, dates, loyer, dépôt de garantie, révision IRL |
+| **Suivi des paiements** | Enregistrer un paiement, détecter les retards, générer une quittance PDF |
+| **Tableau de bord** | Loyers attendus vs perçus, biens occupés/vacants, alertes |
+
+### Hors MVP (v2+)
+
+- Génération de contrats de bail PDF
+- Gestion des charges
+- État des lieux numérique
+- Notifications email automatiques
+- Encadrement des loyers
+- Intégrations comptables (Pennylane, Dolibarr)
+
+### Version Enterprise (payante — après sortie d'Atos)
+
+- SSO / LDAP / Active Directory
+- Signature électronique
+- Archivage légal
+- Support & SLA
+- Déploiement on-premise assisté
+
+---
+
+## Modèle Open-Core
+
+| Fonctionnalité | Community (public) | Enterprise (payant) |
+|---|---|---|
+| Gestion biens / locataires / baux | ✅ | ✅ |
+| Suivi paiements + quittances | ✅ | ✅ |
+| Tableau de bord | ✅ | ✅ |
+| SSO / LDAP | ❌ | ✅ |
+| Signature électronique | ❌ | ✅ |
+| Archivage légal | ❌ | ✅ |
+| Support & SLA | ❌ | ✅ |
+
+---
+
+## État d'avancement
+
+- [x] Nom du projet validé : **Birdhab**
+- [x] Licence BUSL-1.1 configurée
+- [x] Structure du repo créée (7 microservices)
+- [x] CI/CD GitHub Actions configuré
+- [x] .gitignore configuré
+- [ ] Périmètre MVP finalisé
+- [ ] Modélisation des données (entités JPA)
+- [ ] Contrats API REST (OpenAPI)
+- [ ] Premier service codé (auth)
+- [ ] Docker Compose fonctionnel
+
+---
+
+## Conventions de développement
+
+- **Branches** : `main` (production) et `develop` (développement)
+- **Commits** : Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`)
+- **Java** : Java 21, utiliser les records pour les DTOs, pattern matching si pertinent
+- **Tests** : JUnit 5 + Mockito, viser 80% de couverture minimum
+- **Documentation** : Javadoc sur les classes publiques, OpenAPI sur tous les endpoints
+
+---
+
+## Questions en suspens
+
+- [ ] Finaliser le périmètre exact du MVP
+- [ ] Choisir l'outil de migration BDD (Flyway vs Liquibase)
+- [ ] Définir la stratégie multi-tenant (un schéma par propriétaire ?)
+- [ ] Choisir le générateur de PDF (iText vs Apache PDFBox)
