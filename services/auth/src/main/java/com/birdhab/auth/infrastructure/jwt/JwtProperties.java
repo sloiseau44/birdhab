@@ -1,0 +1,40 @@
+package com.birdhab.auth.infrastructure.jwt;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+/**
+ * Liaison de la configuration {@code birdhab.jwt.*} (voir {@code application.yml}).
+ */
+@Component
+@ConfigurationProperties(prefix = "birdhab.jwt")
+public class JwtProperties {
+
+    private String secret;
+    private long accessTokenExpirationMs;
+    private long refreshTokenExpirationMs;
+
+    public String getSecret() {
+        return secret;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
+    }
+
+    public long getAccessTokenExpirationMs() {
+        return accessTokenExpirationMs;
+    }
+
+    public void setAccessTokenExpirationMs(long accessTokenExpirationMs) {
+        this.accessTokenExpirationMs = accessTokenExpirationMs;
+    }
+
+    public long getRefreshTokenExpirationMs() {
+        return refreshTokenExpirationMs;
+    }
+
+    public void setRefreshTokenExpirationMs(long refreshTokenExpirationMs) {
+        this.refreshTokenExpirationMs = refreshTokenExpirationMs;
+    }
+}
