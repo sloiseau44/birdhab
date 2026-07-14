@@ -18,7 +18,10 @@
 
 - **Migrations BDD : Flyway** (pas Liquibase). Fichiers `V{n}__description.sql` dans `src/main/resources/db/migration`.
 - **Génération PDF : Apache PDFBox** (pas iText, incompatible licence avec le modèle open-core).
-- **Multi-tenant : schéma unique**, isolation via colonne `owner_id` en FK sur toutes les tables métier. Pas de schéma par propriétaire.
+- **Multi-tenant (propriétaires) : schéma unique**, isolation via colonne `owner_id` sur toutes les tables métier. Pas de schéma par propriétaire.
+- **Isolation Flyway par microservice : un schéma Postgres dédié par service** (ex. `property`), même si tous partagent la même base `birdhab` en local — évite la collision de `flyway_schema_history` entre services (voir `spring.flyway.schemas` dans `application.yml` de `property`). À reproduire pour chaque nouveau service.
+- **`owner_id` sans contrainte FK inter-service** : `owner_id` référence l'id d'un `User` du service `auth` par simple convention applicative (UUID), sans relation JPA ni FK SQL — cohérent avec « un service = un contexte borné » (voir Architecture). Ne pas ajouter de FK vers une table d'un autre microservice.
+- **Propagation d'identité inter-services (en l'absence de Gateway) : validation JWT dupliquée dans chaque service consommateur**, secret partagé via `JWT_SECRET` (même valeur par défaut que `auth` en local), sans appel réseau vers `auth`. À reconduire pour chaque nouveau service tant que la Gateway n'existe pas (voir `services/property/.../infrastructure/jwt`).
 
 ## Architecture
 
@@ -47,21 +50,27 @@ Tout le reste (v2+, Enterprise) est hors scope tant que non demandé expliciteme
 
 ## Prochaine tâche pour Claude Code
 
-Le squelette Maven du service `auth` est en place (pom.xml, application.yml,
-classe principale, entités JPA, migration Flyway V1). Reste à implémenter,
-en respectant strictement `docs/api/auth.yaml` :
-- Repositories Spring Data JPA (`UserRepository`, `RoleRepository`, `RefreshTokenRepository`)
-- Service d'authentification (hash BCrypt, génération/validation JWT avec jjwt)
-- Configuration Spring Security (filtre JWT, `SecurityFilterChain`)
-- Controllers REST + DTOs (records) pour `/auth/register`, `/auth/login`,
-  `/auth/refresh`, `/auth/logout`, `/auth/me`
-- Tests JUnit 5 + Mockito (viser 80% de couverture)
+Les services `auth` (register/login/refresh/logout/me, JWT, Spring Security) et
+`property` (CRUD des biens) sont entièrement implémentés et testés (JUnit 5 +
+Mockito, couverture visée 80%).
+
+Prochaine étape suggérée : service `tenant` (gestion des locataires — fiche,
+coordonnées, documents d'identité), en suivant la même méthode que pour `property` :
+1. Contrat OpenAPI (`docs/api/tenant.yml`) — à proposer et faire valider avant de coder
+2. Squelette Maven du module (`services/tenant/pom.xml`, ajouté aux `<modules>` du pom racine)
+3. Entité(s) JPA + migration Flyway V1, dans un schéma Postgres dédié `tenant`
+   (voir décision « Isolation Flyway par microservice » ci-dessus)
+4. Architecture en couches identique à `auth`/`property` (domain/api/infrastructure/config)
+5. Sécurité : réutiliser le pattern de validation JWT dupliquée introduit dans `property`
+6. Tests JUnit 5 + Mockito, 80% de couverture visée
 
 ## Contrats API
 
-`docs/api/auth.yaml` : contrat OpenAPI du service `auth` (register, login, refresh,
-logout, me). À respecter strictement lors de l'implémentation des controllers —
-ne pas ajouter d'endpoint ou de champ non prévu sans mettre à jour le contrat en premier.
+- `docs/api/auth.yaml` : contrat OpenAPI du service `auth` (register, login, refresh, logout, me).
+- `docs/api/property.yml` : contrat OpenAPI du service `property` (CRUD des biens).
+
+À respecter strictement lors de l'implémentation des controllers — ne pas ajouter
+d'endpoint ou de champ non prévu sans mettre à jour le contrat en premier.
 
 ## Environnement local
 
