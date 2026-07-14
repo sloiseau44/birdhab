@@ -15,6 +15,7 @@
     <modules>
         <module>shared/common</module>
         <module>services/auth</module>
+        <module>services/property</module>
     </modules>
 
     <properties>
