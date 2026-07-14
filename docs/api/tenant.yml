@@ -1,0 +1,271 @@
+openapi: 3.0.3
+info:
+  title: Birdhab — Tenant Service API
+  description: >
+    Service de gestion des locataires de Birdhab. Permet à un propriétaire
+    authentifié de créer, consulter, modifier et supprimer les fiches de ses
+    locataires (nom, coordonnées). La gestion des documents d'identité et la
+    liaison à un bail sont hors périmètre de cette première version — voir
+    CONTEXT.md (services `document` et gestion des baux, à venir).
+  version: 1.0.0
+  contact:
+    name: Birdhab
+    email: stephaneloiseau44@gmail.com
+  license:
+    name: BUSL-1.1
+
+servers:
+  - url: http://localhost:8083
+    description: Environnement local (via API Gateway ou direct)
+
+tags:
+  - name: Tenants
+    description: Gestion des fiches locataires du propriétaire authentifié
+
+paths:
+  /tenants:
+    post:
+      tags: [Tenants]
+      summary: Ajouter un locataire
+      description: >
+        Crée une nouvelle fiche locataire rattachée au propriétaire authentifié.
+        Le propriétaire (`ownerId`) est déterminé à partir du contexte
+        d'authentification, jamais depuis le corps de la requête.
+      operationId: createTenant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+      responses:
+        '201':
+          description: Locataire créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        '400':
+          description: Requête invalide (champ manquant, email mal formé...)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Tenants]
+      summary: Lister les locataires du propriétaire authentifié
+      operationId: listTenants
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des locataires du propriétaire
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TenantResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tenants/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Tenants]
+      summary: Récupérer un locataire par son identifiant
+      operationId: getTenant
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Locataire trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Locataire introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags: [Tenants]
+      summary: Modifier un locataire
+      operationId: updateTenant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantRequest'
+      responses:
+        '200':
+          description: Locataire mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Locataire introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [Tenants]
+      summary: Supprimer un locataire
+      operationId: deleteTenant
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Locataire supprimé (aucun contenu)
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Locataire introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Address:
+      type: object
+      required: [street, postalCode, city]
+      properties:
+        street:
+          type: string
+          example: 12 rue des Oliviers
+        postalCode:
+          type: string
+          pattern: '^[0-9]{5}$'
+          example: '06000'
+        city:
+          type: string
+          example: Nice
+
+    TenantRequest:
+      type: object
+      required: [firstName, lastName, email]
+      properties:
+        firstName:
+          type: string
+          maxLength: 100
+          example: Julie
+        lastName:
+          type: string
+          maxLength: 100
+          example: Martin
+        email:
+          type: string
+          format: email
+          example: julie.martin@example.com
+        phone:
+          type: string
+          maxLength: 20
+          example: '0612345678'
+        address:
+          $ref: '#/components/schemas/Address'
+
+    TenantResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+          description: Identifiant du propriétaire (User.id du service auth)
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: Bad Request
+        message:
+          type: string
+          example: L'email est obligatoire
+        path:
+          type: string
+          example: /tenants

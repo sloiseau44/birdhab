@@ -16,6 +16,7 @@
         <module>shared/common</module>
         <module>services/auth</module>
         <module>services/property</module>
+        <module>services/tenant</module>
     </modules>
 
     <properties>
