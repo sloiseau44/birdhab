@@ -86,6 +86,16 @@ d'agrégation et d'affichage côté frontend, cohérente avec la décision déj�
 prise deux fois (quittance PDF, Gateway) de ne jamais faire d'appel réseau
 serveur-à-serveur pour agréger des données inter-services.
 
+**Revue de sécurité menée sur les 6 services + gateway, 3 correctifs appliqués** :
+canal temporel au login (`auth` vérifie désormais le mot de passe même si
+l'email est inconnu, contre un hash factice), refresh tokens hachés SHA-256
+en base au lieu du clair (`RefreshToken.tokenHash`, migration
+`V2__hash_refresh_tokens.sql`), type de fichier de `document` détecté par
+signature d'octets réels plutôt que par le `Content-Type` déclaré par le
+client (falsifiable). Voir le tableau « Décisions actées » de CONTEXT.md
+pour le détail de chaque correctif — à reproduire pour tout nouveau code
+touchant à l'authentification ou à l'upload de fichiers.
+
 Prochaine étape suggérée : le **frontend** (aucune stack choisie à ce
 stade — React/Vue/Angular tous à considérer), chantier distinct du backend
 Java/Spring suivi jusqu'ici. Ne pas le démarrer sans validation explicite de
