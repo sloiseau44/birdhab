@@ -17,6 +17,7 @@
         <module>services/auth</module>
         <module>services/property</module>
         <module>services/tenant</module>
+        <module>services/lease</module>
     </modules>
 
     <properties>

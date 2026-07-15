@@ -1,0 +1,299 @@
+openapi: 3.0.3
+info:
+  title: Birdhab — Lease Service API
+  description: >
+    Service de gestion des baux de Birdhab. Permet à un propriétaire
+    authentifié de créer, consulter, modifier et supprimer les baux reliant
+    un bien (`propertyId`, service `property`) à un locataire (`tenantId`,
+    service `tenant`), par référence applicative (UUID, sans FK inter-service).
+    Le calcul automatique de la révision IRL et la génération du contrat PDF
+    sont hors périmètre de cette première version — voir CONTEXT.md.
+  version: 1.0.0
+  contact:
+    name: Birdhab
+    email: stephaneloiseau44@gmail.com
+  license:
+    name: BUSL-1.1
+
+servers:
+  - url: http://localhost:8084
+    description: Environnement local (via API Gateway ou direct)
+
+tags:
+  - name: Leases
+    description: Gestion des baux du propriétaire authentifié
+
+paths:
+  /leases:
+    post:
+      tags: [Leases]
+      summary: Créer un bail
+      description: >
+        Crée un nouveau bail rattaché au propriétaire authentifié, reliant un
+        bien et un locataire existants. Le propriétaire (`ownerId`) est
+        déterminé à partir du contexte d'authentification, jamais depuis le
+        corps de la requête. `propertyId` et `tenantId` ne sont pas validés
+        par appel réseau vers les services `property`/`tenant` en v1 (même
+        convention que `owner_id` — voir CLAUDE.md).
+      operationId: createLease
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaseRequest'
+      responses:
+        '201':
+          description: Bail créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaseResponse'
+        '400':
+          description: Requête invalide (champ manquant, dates incohérentes...)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Leases]
+      summary: Lister les baux du propriétaire authentifié
+      operationId: listLeases
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des baux du propriétaire
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaseResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /leases/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Leases]
+      summary: Récupérer un bail par son identifiant
+      operationId: getLease
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Bail trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaseResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bail introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags: [Leases]
+      summary: Modifier un bail
+      operationId: updateLease
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaseRequest'
+      responses:
+        '200':
+          description: Bail mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaseResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bail introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [Leases]
+      summary: Supprimer un bail
+      operationId: deleteLease
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Bail supprimé (aucun contenu)
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Bail introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LeaseStatus:
+      type: string
+      description: Statut du bail
+      enum: [ACTIVE, TERMINATED]
+
+    LeaseRequest:
+      type: object
+      required: [propertyId, tenantId, startDate, rentAmount, depositAmount]
+      properties:
+        propertyId:
+          type: string
+          format: uuid
+          description: Identifiant du bien loué (Property.id du service property)
+        tenantId:
+          type: string
+          format: uuid
+          description: Identifiant du locataire (Tenant.id du service tenant)
+        startDate:
+          type: string
+          format: date
+          example: '2026-09-01'
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Date de fin du bail, absente si bail en cours sans terme fixé
+          example: '2029-08-31'
+        rentAmount:
+          type: number
+          format: double
+          description: Loyer mensuel hors charges, en euros
+          minimum: 0
+          example: 850.00
+        depositAmount:
+          type: number
+          format: double
+          description: Dépôt de garantie, en euros
+          minimum: 0
+          example: 850.00
+        irlReferenceQuarter:
+          type: string
+          nullable: true
+          description: Trimestre IRL de référence pour la révision annuelle (ex. 2026-T1)
+          pattern: '^[0-9]{4}-T[1-4]$'
+          example: '2026-T1'
+
+    LeaseResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+          description: Identifiant du propriétaire (User.id du service auth)
+        propertyId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        rentAmount:
+          type: number
+          format: double
+          example: 850.00
+        depositAmount:
+          type: number
+          format: double
+          example: 850.00
+        irlReferenceQuarter:
+          type: string
+          nullable: true
+          example: '2026-T1'
+        status:
+          $ref: '#/components/schemas/LeaseStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: Bad Request
+        message:
+          type: string
+          example: La date de fin doit être postérieure à la date de début
+        path:
+          type: string
+          example: /leases
