@@ -148,8 +148,10 @@ birdhab/
 - [x] Service `property` codé et testé (CRUD des biens)
 - [x] Service `tenant` codé et testé (CRUD des locataires)
 - [x] Service `lease` codé et testé (CRUD des baux, statut dérivé de la date de fin)
-- [ ] Service `payment` (suivi des paiements, quittances PDF)
+- [x] Service `payment` codé et testé (suivi des paiements, quittance PDF via Apache PDFBox)
+- [ ] Service `document` (documents d'identité des locataires, stockage MinIO)
 - [ ] Tableau de bord
+- [ ] Gateway (point d'entrée unique)
 - [ ] Périmètre MVP finalisé
 
 ---
@@ -172,6 +174,7 @@ birdhab/
 | Générateur PDF | **Apache PDFBox** | Licence Apache 2.0, cohérente avec la philosophie open-core du projet. iText impose une licence commerciale ou AGPL au-delà d'un usage basique, ce qui est délicat vu le modèle BUSL-1.1. |
 | Stratégie multi-tenant | **Schéma unique + `owner_id`** en clé étrangère sur toutes les tables métier | Suffisant pour du 1 à 10 biens par propriétaire ; évite la complexité opérationnelle d'un schéma par propriétaire. Migration vers du multi-schéma restera possible plus tard si besoin. |
 | Gestion des baux | **Nouveau microservice dédié `lease`** | Cohérent avec le pattern 1 service = 1 contexte borné déjà suivi pour auth/property/tenant, plutôt que de mélanger le cycle de vie du bail avec celui du bien ou du locataire. |
+| Quittance PDF (`payment`) | **Agrégation côté appelant, pas d'appel réseau serveur-à-serveur** | Une quittance légale a besoin de données réparties dans 3 services (bailleur/auth, locataire/tenant, bien/property) ; plutôt que d'assouplir la convention « pas d'appel réseau entre microservices », c'est le frontend/BFF qui agrège ces informations et les transmet à `payment`, qui se limite à la mise en page PDF. |
 
 ## Questions en suspens
 
