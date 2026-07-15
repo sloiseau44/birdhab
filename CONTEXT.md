@@ -142,11 +142,14 @@ birdhab/
 - [x] Structure du repo créée (7 microservices)
 - [x] CI/CD GitHub Actions configuré
 - [x] .gitignore configuré
+- [x] Docker Compose fonctionnel (PostgreSQL + MinIO)
+- [x] Service `auth` codé et testé (register/login/refresh/logout/me, JWT, Spring Security)
+- [x] Service `property` codé et testé (CRUD des biens)
+- [x] Service `tenant` codé et testé (CRUD des locataires)
+- [ ] Gestion des baux — architecture à trancher (nouveau service `lease` ou rattaché à `property`/`tenant`)
+- [ ] Service `payment` (suivi des paiements, quittances PDF)
+- [ ] Tableau de bord
 - [ ] Périmètre MVP finalisé
-- [ ] Modélisation des données (entités JPA)
-- [ ] Contrats API REST (OpenAPI)
-- [ ] Premier service codé (auth)
-- [ ] Docker Compose fonctionnel
 
 ---
 
@@ -171,3 +174,4 @@ birdhab/
 ## Questions en suspens
 
 - [ ] Finaliser le périmètre exact du MVP
+- [ ] Gestion des baux : nouveau microservice dédié (ex. `lease`) ou rattachement à `property`/`tenant` ?

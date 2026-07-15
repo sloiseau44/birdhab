@@ -50,24 +50,34 @@ Tout le reste (v2+, Enterprise) est hors scope tant que non demandé expliciteme
 
 ## Prochaine tâche pour Claude Code
 
-Les services `auth` (register/login/refresh/logout/me, JWT, Spring Security) et
-`property` (CRUD des biens) sont entièrement implémentés et testés (JUnit 5 +
-Mockito, couverture visée 80%).
+Les services `auth` (register/login/refresh/logout/me, JWT, Spring Security),
+`property` (CRUD des biens) et `tenant` (CRUD locataires) sont entièrement
+implémentés et testés (JUnit 5 + Mockito, couverture visée 80%, 100% atteint
+sur `TenantService`). Documents d'identité et rattachement au bail restent
+hors périmètre de `tenant` v1 (voir `CONTEXT.md`).
 
-Prochaine étape suggérée : service `tenant` (gestion des locataires — fiche,
-coordonnées, documents d'identité), en suivant la même méthode que pour `property` :
-1. Contrat OpenAPI (`docs/api/tenant.yml`) — à proposer et faire valider avant de coder
-2. Squelette Maven du module (`services/tenant/pom.xml`, ajouté aux `<modules>` du pom racine)
-3. Entité(s) JPA + migration Flyway V1, dans un schéma Postgres dédié `tenant`
+Prochaine étape suggérée : **gestion des baux**, module suivant du MVP
+(création de bail, dates, loyer, dépôt de garantie, révision IRL). Décision
+d'architecture à valider avant de coder : nouveau service dédié (ex. `lease`),
+ou rattachement à `property`/`tenant` ? Aucun service `lease` n'existe dans
+l'architecture actuelle (`auth`/`property`/`tenant`/`document`/`payment`/`gateway`),
+donc ce point doit être tranché explicitement en premier.
+
+Une fois la question d'architecture tranchée, suivre la même méthode que pour
+`property`/`tenant` :
+1. Contrat OpenAPI — à proposer et faire valider avant de coder
+2. Squelette Maven du module (ajouté aux `<modules>` du pom racine si nouveau service)
+3. Entité(s) JPA + migration Flyway V1, dans un schéma Postgres dédié
    (voir décision « Isolation Flyway par microservice » ci-dessus)
-4. Architecture en couches identique à `auth`/`property` (domain/api/infrastructure/config)
-5. Sécurité : réutiliser le pattern de validation JWT dupliquée introduit dans `property`
+4. Architecture en couches identique à `auth`/`property`/`tenant` (domain/api/infrastructure/config)
+5. Sécurité : réutiliser le pattern de validation JWT dupliquée introduit dans `property`/`tenant`
 6. Tests JUnit 5 + Mockito, 80% de couverture visée
 
 ## Contrats API
 
 - `docs/api/auth.yaml` : contrat OpenAPI du service `auth` (register, login, refresh, logout, me).
 - `docs/api/property.yml` : contrat OpenAPI du service `property` (CRUD des biens).
+- `docs/api/tenant.yml` : contrat OpenAPI du service `tenant` (CRUD des locataires).
 
 À respecter strictement lors de l'implémentation des controllers — ne pas ajouter
 d'endpoint ou de champ non prévu sans mettre à jour le contrat en premier.
