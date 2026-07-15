@@ -19,7 +19,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HexFormat;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -29,6 +34,14 @@ import java.util.UUID;
 @Service
 @Transactional
 public class AuthService {
+
+    /**
+     * Hash BCrypt valide ne correspondant à aucun mot de passe réel, utilisé
+     * uniquement pour que {@code login} effectue un travail de vérification
+     * de coût comparable que l'email existe ou non (voir {@link #login}).
+     */
+    private static final String DUMMY_PASSWORD_HASH =
+            "$2a$10$C6UzMDM.H6dfI/f/IKcEeO7hTUizNCTQZQOEQBudZG.rFJEkkkbrO";
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -77,16 +90,24 @@ public class AuthService {
     /**
      * Authentifie un utilisateur par email/mot de passe.
      *
+     * <p>Effectue toujours une vérification BCrypt, même si l'email n'existe
+     * pas (contre un hash factice {@link #DUMMY_PASSWORD_HASH}), pour que le
+     * temps de réponse ne permette pas de déduire quels emails sont
+     * enregistrés (canal temporel).</p>
+     *
      * @throws InvalidCredentialsException si l'email ou le mot de passe est incorrect
      * @throws AccountDisabledException    si le compte est désactivé
      */
     public TokenPair login(String email, String rawPassword) {
-        User user = userRepository.findByEmail(normalizeEmail(email))
-                .orElseThrow(InvalidCredentialsException::new);
+        Optional<User> maybeUser = userRepository.findByEmail(normalizeEmail(email));
+        String hashToCheck = maybeUser.map(User::getPasswordHash).orElse(DUMMY_PASSWORD_HASH);
+        boolean passwordMatches = passwordEncoder.matches(rawPassword, hashToCheck);
 
-        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+        if (maybeUser.isEmpty() || !passwordMatches) {
             throw new InvalidCredentialsException();
         }
+
+        User user = maybeUser.get();
         if (!user.isEnabled()) {
             throw new AccountDisabledException();
         }
@@ -107,7 +128,7 @@ public class AuthService {
             throw new InvalidRefreshTokenException();
         }
 
-        RefreshToken stored = refreshTokenRepository.findByToken(refreshTokenValue)
+        RefreshToken stored = refreshTokenRepository.findByTokenHash(hashToken(refreshTokenValue))
                 .orElseThrow(InvalidRefreshTokenException::new);
 
         if (stored.isRevoked() || stored.isExpired()) {
@@ -133,7 +154,7 @@ public class AuthService {
      *                                      n'appartient pas à l'utilisateur authentifié
      */
     public void logout(String refreshTokenValue, UUID authenticatedUserId) {
-        RefreshToken stored = refreshTokenRepository.findByToken(refreshTokenValue)
+        RefreshToken stored = refreshTokenRepository.findByTokenHash(hashToken(refreshTokenValue))
                 .orElseThrow(InvalidRefreshTokenException::new);
 
         if (!stored.getUser().getId().equals(authenticatedUserId)) {
@@ -168,12 +189,29 @@ public class AuthService {
         String refreshTokenValue = jwtService.generateRefreshToken(user);
 
         Instant expiresAt = Instant.now().plusMillis(jwtService.getRefreshTokenExpirationMs());
-        refreshTokenRepository.save(new RefreshToken(user, refreshTokenValue, expiresAt));
+        refreshTokenRepository.save(new RefreshToken(user, hashToken(refreshTokenValue), expiresAt));
 
         return new TokenPair(accessToken, refreshTokenValue, jwtService.getAccessTokenExpirationSeconds());
     }
 
     private String normalizeEmail(String email) {
         return email.strip().toLowerCase();
+    }
+
+    /**
+     * Hash SHA-256 (hexadécimal) d'un refresh token, seule forme persistée
+     * en base (voir {@link RefreshToken}). Un hash rapide suffit ici : le
+     * jeton d'origine est un JWT à haute entropie, pas un secret choisi par
+     * un humain — contrairement aux mots de passe (BCrypt), il n'y a pas de
+     * risque de brute-force à ralentir.
+     */
+    private static String hashToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 non disponible", e);
+        }
     }
 }

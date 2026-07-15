@@ -23,7 +23,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +35,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -75,6 +81,16 @@ class AuthServiceTest {
         return user;
     }
 
+    /** Reproduit AuthService.hashToken pour stuber/vérifier les appels par hash. */
+    private static String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     private void stubTokenIssuance() {
         when(jwtService.generateAccessToken(any(User.class))).thenReturn("access-token");
         when(jwtService.generateRefreshToken(any(User.class))).thenReturn("refresh-token");
@@ -99,7 +115,9 @@ class AuthServiceTest {
         assertThat(result.expiresInSeconds()).isEqualTo(900L);
 
         verify(userRepository).save(argThatUserHasRole(RoleName.OWNER));
-        verify(refreshTokenRepository).save(any(RefreshToken.class));
+        verify(refreshTokenRepository).save(argThat(saved ->
+                saved.getTokenHash().equals(sha256Hex("refresh-token"))
+                        && !saved.getTokenHash().equals("refresh-token")));
     }
 
     @Test
@@ -147,6 +165,18 @@ class AuthServiceTest {
     }
 
     @Test
+    void login_unknownEmail_stillPerformsPasswordCheckForTimingConsistency() {
+        // Régression : le hash doit être vérifié même si l'email n'existe pas,
+        // pour ne pas exposer un canal temporel permettant d'énumérer les comptes.
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(EMAIL, RAW_PASSWORD))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        verify(passwordEncoder).matches(eq(RAW_PASSWORD), anyString());
+    }
+
+    @Test
     void login_wrongPassword_throwsInvalidCredentials() {
         User user = userWithId(UUID.randomUUID(), true);
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
@@ -171,11 +201,11 @@ class AuthServiceTest {
     @Test
     void refresh_nominal_revokesOldAndIssuesNewTokens() {
         User user = userWithId(UUID.randomUUID(), true);
-        RefreshToken stored = new RefreshToken(user, "old-refresh", Instant.now().plusSeconds(3600));
+        RefreshToken stored = new RefreshToken(user, sha256Hex("old-refresh"), Instant.now().plusSeconds(3600));
 
         when(jwtService.parseClaims("old-refresh")).thenReturn(claims);
         when(jwtService.isRefreshToken(claims)).thenReturn(true);
-        when(refreshTokenRepository.findByToken("old-refresh")).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(sha256Hex("old-refresh"))).thenReturn(Optional.of(stored));
         stubTokenIssuance();
 
         TokenPair result = authService.refresh("old-refresh");
@@ -193,7 +223,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.refresh("garbage"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
 
-        verify(refreshTokenRepository, never()).findByToken(anyString());
+        verify(refreshTokenRepository, never()).findByTokenHash(anyString());
     }
 
     @Test
@@ -209,7 +239,7 @@ class AuthServiceTest {
     void refresh_notPersisted_throwsInvalidRefreshToken() {
         when(jwtService.parseClaims("unknown")).thenReturn(claims);
         when(jwtService.isRefreshToken(claims)).thenReturn(true);
-        when(refreshTokenRepository.findByToken("unknown")).thenReturn(Optional.empty());
+        when(refreshTokenRepository.findByTokenHash(sha256Hex("unknown"))).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.refresh("unknown"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
@@ -218,12 +248,12 @@ class AuthServiceTest {
     @Test
     void refresh_revokedToken_throwsInvalidRefreshToken() {
         User user = userWithId(UUID.randomUUID(), true);
-        RefreshToken stored = new RefreshToken(user, "revoked-token", Instant.now().plusSeconds(3600));
+        RefreshToken stored = new RefreshToken(user, sha256Hex("revoked-token"), Instant.now().plusSeconds(3600));
         stored.revoke();
 
         when(jwtService.parseClaims("revoked-token")).thenReturn(claims);
         when(jwtService.isRefreshToken(claims)).thenReturn(true);
-        when(refreshTokenRepository.findByToken("revoked-token")).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(sha256Hex("revoked-token"))).thenReturn(Optional.of(stored));
 
         assertThatThrownBy(() -> authService.refresh("revoked-token"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
@@ -232,11 +262,11 @@ class AuthServiceTest {
     @Test
     void refresh_expiredToken_throwsInvalidRefreshToken() {
         User user = userWithId(UUID.randomUUID(), true);
-        RefreshToken stored = new RefreshToken(user, "expired-token", Instant.now().minusSeconds(3600));
+        RefreshToken stored = new RefreshToken(user, sha256Hex("expired-token"), Instant.now().minusSeconds(3600));
 
         when(jwtService.parseClaims("expired-token")).thenReturn(claims);
         when(jwtService.isRefreshToken(claims)).thenReturn(true);
-        when(refreshTokenRepository.findByToken("expired-token")).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(sha256Hex("expired-token"))).thenReturn(Optional.of(stored));
 
         assertThatThrownBy(() -> authService.refresh("expired-token"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
@@ -245,11 +275,11 @@ class AuthServiceTest {
     @Test
     void refresh_disabledAccount_throwsInvalidRefreshToken() {
         User user = userWithId(UUID.randomUUID(), false);
-        RefreshToken stored = new RefreshToken(user, "token-of-disabled-user", Instant.now().plusSeconds(3600));
+        RefreshToken stored = new RefreshToken(user, sha256Hex("token-of-disabled-user"), Instant.now().plusSeconds(3600));
 
         when(jwtService.parseClaims("token-of-disabled-user")).thenReturn(claims);
         when(jwtService.isRefreshToken(claims)).thenReturn(true);
-        when(refreshTokenRepository.findByToken("token-of-disabled-user")).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(sha256Hex("token-of-disabled-user"))).thenReturn(Optional.of(stored));
 
         assertThatThrownBy(() -> authService.refresh("token-of-disabled-user"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
@@ -261,9 +291,9 @@ class AuthServiceTest {
     void logout_nominal_revokesToken() {
         UUID userId = UUID.randomUUID();
         User user = userWithId(userId, true);
-        RefreshToken stored = new RefreshToken(user, "to-revoke", Instant.now().plusSeconds(3600));
+        RefreshToken stored = new RefreshToken(user, sha256Hex("to-revoke"), Instant.now().plusSeconds(3600));
 
-        when(refreshTokenRepository.findByToken("to-revoke")).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(sha256Hex("to-revoke"))).thenReturn(Optional.of(stored));
 
         authService.logout("to-revoke", userId);
 
@@ -273,7 +303,7 @@ class AuthServiceTest {
 
     @Test
     void logout_tokenNotFound_throwsInvalidRefreshToken() {
-        when(refreshTokenRepository.findByToken("missing")).thenReturn(Optional.empty());
+        when(refreshTokenRepository.findByTokenHash(sha256Hex("missing"))).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.logout("missing", UUID.randomUUID()))
                 .isInstanceOf(InvalidRefreshTokenException.class);
@@ -282,9 +312,9 @@ class AuthServiceTest {
     @Test
     void logout_tokenOwnedByAnotherUser_throwsInvalidRefreshToken() {
         User owner = userWithId(UUID.randomUUID(), true);
-        RefreshToken stored = new RefreshToken(owner, "not-mine", Instant.now().plusSeconds(3600));
+        RefreshToken stored = new RefreshToken(owner, sha256Hex("not-mine"), Instant.now().plusSeconds(3600));
 
-        when(refreshTokenRepository.findByToken("not-mine")).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHash(sha256Hex("not-mine"))).thenReturn(Optional.of(stored));
 
         assertThatThrownBy(() -> authService.logout("not-mine", UUID.randomUUID()))
                 .isInstanceOf(InvalidRefreshTokenException.class);

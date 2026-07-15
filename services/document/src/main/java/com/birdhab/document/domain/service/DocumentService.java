@@ -10,9 +10,11 @@ import com.birdhab.document.domain.storage.FileStorage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -24,8 +26,11 @@ import java.util.UUID;
 @Transactional
 public class DocumentService {
 
-    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
-            "application/pdf", "image/jpeg", "image/png");
+    private static final byte[] PDF_MAGIC = {0x25, 0x50, 0x44, 0x46}; // %PDF
+    private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+    private static final byte[] PNG_MAGIC =
+            {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+
     private static final long MAX_SIZE_BYTES = 10L * 1024 * 1024;
 
     private final DocumentRepository documentRepository;
@@ -37,18 +42,29 @@ public class DocumentService {
     }
 
     /**
-     * @throws UnsupportedFileTypeException si {@code contentType} n'est pas PDF/JPEG/PNG
-     * @throws FileTooLargeException si {@code sizeBytes} dépasse 10 Mo
+     * Le type de fichier réellement stocké est déterminé en lisant les
+     * premiers octets du contenu (signature PDF/JPEG/PNG), jamais à partir
+     * du seul {@code Content-Type} déclaré par l'appelant (facilement
+     * falsifiable) : {@code declaredContentType} ne sert qu'au message
+     * d'erreur si le fichier est rejeté.
+     *
+     * @throws UnsupportedFileTypeException si le contenu ne correspond à aucune signature PDF/JPEG/PNG
+     * @throws FileTooLargeException si le fichier dépasse 10 Mo
      */
-    public Document upload(UUID ownerId, UUID tenantId, String fileName, String contentType,
-                            long sizeBytes, InputStream content) {
-        validateContentType(contentType);
-        validateSize(sizeBytes);
+    public Document upload(UUID ownerId, UUID tenantId, String fileName, String declaredContentType,
+                            InputStream content) {
+        byte[] bytes = readAllBytes(content);
+        validateSize(bytes.length);
+
+        String detectedContentType = detectContentType(bytes);
+        if (detectedContentType == null) {
+            throw new UnsupportedFileTypeException(declaredContentType);
+        }
 
         String storageKey = UUID.randomUUID().toString();
-        fileStorage.upload(storageKey, content, sizeBytes, contentType);
+        fileStorage.upload(storageKey, new ByteArrayInputStream(bytes), bytes.length, detectedContentType);
 
-        Document document = new Document(ownerId, tenantId, fileName, contentType, sizeBytes, storageKey);
+        Document document = new Document(ownerId, tenantId, fileName, detectedContentType, bytes.length, storageKey);
         return documentRepository.save(document);
     }
 
@@ -88,15 +104,42 @@ public class DocumentService {
         documentRepository.delete(document);
     }
 
-    private void validateContentType(String contentType) {
-        if (!ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new UnsupportedFileTypeException(contentType);
-        }
-    }
-
     private void validateSize(long sizeBytes) {
         if (sizeBytes > MAX_SIZE_BYTES) {
             throw new FileTooLargeException();
+        }
+    }
+
+    private String detectContentType(byte[] bytes) {
+        if (startsWith(bytes, PDF_MAGIC)) {
+            return "application/pdf";
+        }
+        if (startsWith(bytes, JPEG_MAGIC)) {
+            return "image/jpeg";
+        }
+        if (startsWith(bytes, PNG_MAGIC)) {
+            return "image/png";
+        }
+        return null;
+    }
+
+    private boolean startsWith(byte[] data, byte[] prefix) {
+        if (data.length < prefix.length) {
+            return false;
+        }
+        for (int i = 0; i < prefix.length; i++) {
+            if (data[i] != prefix[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private byte[] readAllBytes(InputStream content) {
+        try {
+            return content.readAllBytes();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }

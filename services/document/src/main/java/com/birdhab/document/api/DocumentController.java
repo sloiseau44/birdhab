@@ -47,7 +47,7 @@ public class DocumentController {
         try (var content = file.getInputStream()) {
             Document document = documentService.upload(
                     currentOwnerId(authentication), tenantId, file.getOriginalFilename(),
-                    file.getContentType(), file.getSize(), content);
+                    file.getContentType(), content);
             return toResponse(document);
         } catch (IOException e) {
             throw new UncheckedIOException("Échec de la lecture du fichier envoyé", e);

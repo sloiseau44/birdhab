@@ -9,6 +9,13 @@ info:
     service `tenant` (même convention que les autres relations inter-services
     — voir CLAUDE.md). Le rattachement à un bail et la génération de contrats
     PDF restent hors périmètre de cette première version.
+
+    Le type de fichier réellement stocké (`contentType` dans la réponse) est
+    déterminé en inspectant les premiers octets du contenu envoyé (signature
+    PDF/JPEG/PNG), jamais uniquement à partir du `Content-Type` déclaré par
+    le client (facilement falsifiable) : un fichier dont le contenu ne
+    correspond à aucune des trois signatures est rejeté, même si son
+    `Content-Type` déclaré prétend être l'un des types acceptés.
   version: 1.0.0
   contact:
     name: Birdhab
