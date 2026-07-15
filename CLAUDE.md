@@ -52,28 +52,34 @@ Tout le reste (v2+, Enterprise) est hors scope tant que non demandé expliciteme
 ## Prochaine tâche pour Claude Code
 
 Les services `auth` (register/login/refresh/logout/me, JWT, Spring Security),
-`property` (CRUD des biens), `tenant` (CRUD locataires), `lease` (CRUD baux)
-et `payment` (suivi des paiements, quittance PDF) sont entièrement implémentés
-et testés (JUnit 5 + Mockito, couverture visée 80%, 100% atteint sur
-`TenantService`, `LeaseService`, `PaymentService` et `ReceiptPdfGenerator`).
+`property` (CRUD des biens), `tenant` (CRUD locataires), `lease` (CRUD baux),
+`payment` (suivi des paiements, quittance PDF) et `document` (upload des
+documents d'identité, stockage MinIO) sont entièrement implémentés et testés
+(JUnit 5 + Mockito, couverture visée 80%, 100% atteint sur `TenantService`,
+`LeaseService`, `PaymentService`, `ReceiptPdfGenerator` et `DocumentService`).
 
-Hors périmètre v1, documenté par service : documents d'identité (`tenant`),
-calcul automatique de la révision IRL et génération du contrat de bail PDF
-(`lease`). Le statut d'un bail (`ACTIVE`/`TERMINATED`) et celui d'une échéance
-(`PENDING`/`PAID`/`LATE`) sont dérivés à la lecture plutôt que persistés.
-La quittance PDF de `payment` ne va jamais chercher elle-même les informations
-bailleur/locataire/bien auprès des autres services : l'appelant les fournit
-dans `ReceiptRequest` (voir décision « Aucune agrégation cross-service » ci-dessus).
+Hors périmètre v1 : calcul automatique de la révision IRL et génération du
+contrat de bail PDF (`lease`), rattachement d'un document à un bail
+(`document`). Le statut d'un bail (`ACTIVE`/`TERMINATED`) et celui d'une
+échéance (`PENDING`/`PAID`/`LATE`) sont dérivés à la lecture plutôt que
+persistés. La quittance PDF de `payment` ne va jamais chercher elle-même les
+informations bailleur/locataire/bien auprès des autres services : l'appelant
+les fournit dans `ReceiptRequest` (voir décision « Aucune agrégation
+cross-service » ci-dessus). `document` isole le SDK MinIO derrière un port
+`FileStorage` (domain/storage), pour garder `DocumentService` testable sans
+instance MinIO réelle — ce pattern de port est à reconduire pour toute
+future dépendance à un système externe (email, paiement en ligne...).
 
-Prochaine étape suggérée : **service `document`** (documents d'identité des
-locataires, restés hors périmètre de `tenant` v1), qui introduira le premier
-usage de MinIO pour le stockage de fichiers (voir Stack). À défaut, le
-**tableau de bord** (dernier module du MVP) ou la **Gateway** (point d'entrée
-unique, encore absente — chaque service est appelé directement sur son port
-en dev) sont les autres chantiers restants ; à confirmer avec l'utilisateur
-avant de commencer, aucun des trois n'ayant de contrat OpenAPI proposé.
+Prochaine étape suggérée : le **tableau de bord** (dernier module
+fonctionnel du MVP — loyers attendus vs perçus, biens occupés/vacants,
+alertes) ou la **Gateway** (point d'entrée unique, encore absente — chaque
+service est appelé directement sur son port en dev) sont les deux chantiers
+restants ; à confirmer avec l'utilisateur avant de commencer, aucun des deux
+n'ayant de contrat OpenAPI proposé. Le tableau de bord nécessitera de
+décider comment agréger les données de `property`/`tenant`/`lease`/`payment`
+(même question tranchée pour la quittance PDF : agrégation côté appelant).
 
-Suivre la même méthode que pour `property`/`tenant`/`lease`/`payment` :
+Suivre la même méthode que pour `property`/`tenant`/`lease`/`payment`/`document` :
 1. Contrat OpenAPI — à proposer et faire valider avant de coder
 2. Squelette Maven du module (ajouté aux `<modules>` du pom racine si nouveau service)
 3. Entité(s) JPA + migration Flyway V1, dans un schéma Postgres dédié
@@ -89,6 +95,7 @@ Suivre la même méthode que pour `property`/`tenant`/`lease`/`payment` :
 - `docs/api/tenant.yml` : contrat OpenAPI du service `tenant` (CRUD des locataires).
 - `docs/api/lease.yml` : contrat OpenAPI du service `lease` (CRUD des baux).
 - `docs/api/payment.yml` : contrat OpenAPI du service `payment` (suivi des paiements, quittance PDF).
+- `docs/api/document.yml` : contrat OpenAPI du service `document` (upload/téléchargement des documents d'identité).
 
 À respecter strictement lors de l'implémentation des controllers — ne pas ajouter
 d'endpoint ou de champ non prévu sans mettre à jour le contrat en premier.
