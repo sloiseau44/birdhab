@@ -13,6 +13,7 @@
 - Docker / Docker Compose
 - GitHub Actions (CI sur `main` et `develop`)
 - OpenAPI / Swagger pour la doc API
+- Spring Cloud Gateway (pile réactive WebFlux) pour le point d'entrée unique (`gateway`)
 
 ## Décisions techniques actées (ne pas remettre en question sans validation explicite)
 
@@ -21,7 +22,8 @@
 - **Multi-tenant (propriétaires) : schéma unique**, isolation via colonne `owner_id` sur toutes les tables métier. Pas de schéma par propriétaire.
 - **Isolation Flyway par microservice : un schéma Postgres dédié par service** (ex. `property`), même si tous partagent la même base `birdhab` en local — évite la collision de `flyway_schema_history` entre services (voir `spring.flyway.schemas` dans `application.yml` de `property`). À reproduire pour chaque nouveau service.
 - **`owner_id` sans contrainte FK inter-service** : `owner_id` référence l'id d'un `User` du service `auth` par simple convention applicative (UUID), sans relation JPA ni FK SQL — cohérent avec « un service = un contexte borné » (voir Architecture). Ne pas ajouter de FK vers une table d'un autre microservice.
-- **Propagation d'identité inter-services (en l'absence de Gateway) : validation JWT dupliquée dans chaque service consommateur**, secret partagé via `JWT_SECRET` (même valeur par défaut que `auth` en local), sans appel réseau vers `auth`. À reconduire pour chaque nouveau service tant que la Gateway n'existe pas (voir `services/property/.../infrastructure/jwt`).
+- **Propagation d'identité inter-services : validation JWT dupliquée dans chaque service consommateur**, secret partagé via `JWT_SECRET` (même valeur par défaut que `auth` en local), sans appel réseau vers `auth`. Décision définitive, y compris maintenant que `gateway` existe (voir ci-dessous) : à reconduire pour chaque nouveau service (voir `services/property/.../infrastructure/jwt`).
+- **`gateway` : routage HTTP pur, pas de centralisation JWT.** La Gateway route par préfixe de chemin vers chaque service sans jamais valider ni transmettre l'identité elle-même ; centraliser reviendrait à faire confiance à un en-tête interne (ex. `X-User-Id`) alors que les services restent également joignables directement (pas d'isolation réseau prévue pour un produit open-core self-hosted) — un attaquant pourrait alors forger cet en-tête en s'adressant directement au service. Ne pas revenir sur cette décision sans fermer l'accès direct aux services.
 - **Aucune agrégation cross-service côté serveur** : un service qui a besoin de données détenues par un autre (ex. la quittance PDF de `payment`, qui a besoin du nom/adresse du bailleur et du locataire) ne les récupère jamais lui-même par appel réseau ; c'est l'appelant (frontend/BFF) qui les agrège et les transmet dans le corps de la requête. Voir `docs/api/payment.yml` (`ReceiptRequest`) pour l'exemple appliqué.
 
 ## Architecture
@@ -57,6 +59,11 @@ Les services `auth` (register/login/refresh/logout/me, JWT, Spring Security),
 documents d'identité, stockage MinIO) sont entièrement implémentés et testés
 (JUnit 5 + Mockito, couverture visée 80%, 100% atteint sur `TenantService`,
 `LeaseService`, `PaymentService`, `ReceiptPdfGenerator` et `DocumentService`).
+`gateway` est également en place (Spring Cloud Gateway, routage HTTP pur par
+préfixe de chemin vers chaque service — voir décision ci-dessus) ; pas de
+couche domaine à tester, vérifié par un test de contexte sur les routes
+configurées et manuellement de bout en bout (property + gateway lancés
+localement, requête routée avec succès).
 
 Hors périmètre v1 : calcul automatique de la révision IRL et génération du
 contrat de bail PDF (`lease`), rattachement d'un document à un bail
@@ -70,14 +77,14 @@ cross-service » ci-dessus). `document` isole le SDK MinIO derrière un port
 instance MinIO réelle — ce pattern de port est à reconduire pour toute
 future dépendance à un système externe (email, paiement en ligne...).
 
-Prochaine étape suggérée : le **tableau de bord** (dernier module
-fonctionnel du MVP — loyers attendus vs perçus, biens occupés/vacants,
-alertes) ou la **Gateway** (point d'entrée unique, encore absente — chaque
-service est appelé directement sur son port en dev) sont les deux chantiers
-restants ; à confirmer avec l'utilisateur avant de commencer, aucun des deux
-n'ayant de contrat OpenAPI proposé. Le tableau de bord nécessitera de
-décider comment agréger les données de `property`/`tenant`/`lease`/`payment`
-(même question tranchée pour la quittance PDF : agrégation côté appelant).
+Prochaine étape suggérée : le **tableau de bord**, dernier module
+fonctionnel du MVP (loyers attendus vs perçus, biens occupés/vacants,
+alertes). Nécessitera de décider comment agréger les données de
+`property`/`tenant`/`lease`/`payment` (même question tranchée pour la
+quittance PDF : agrégation côté appelant, pas d'appel réseau serveur-à-serveur)
+et où vit ce module (nouveau service dédié, ou logique côté frontend
+consommant les API existantes via la Gateway) — à confirmer avec
+l'utilisateur avant de commencer.
 
 Suivre la même méthode que pour `property`/`tenant`/`lease`/`payment`/`document` :
 1. Contrat OpenAPI — à proposer et faire valider avant de coder

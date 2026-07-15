@@ -150,8 +150,8 @@ birdhab/
 - [x] Service `lease` codé et testé (CRUD des baux, statut dérivé de la date de fin)
 - [x] Service `payment` codé et testé (suivi des paiements, quittance PDF via Apache PDFBox)
 - [x] Service `document` codé et testé (upload/téléchargement des documents d'identité, stockage MinIO)
+- [x] Gateway codée et testée (Spring Cloud Gateway, routage HTTP pur, pas de centralisation JWT)
 - [ ] Tableau de bord
-- [ ] Gateway (point d'entrée unique)
 - [ ] Périmètre MVP finalisé
 
 ---
@@ -176,6 +176,7 @@ birdhab/
 | Gestion des baux | **Nouveau microservice dédié `lease`** | Cohérent avec le pattern 1 service = 1 contexte borné déjà suivi pour auth/property/tenant, plutôt que de mélanger le cycle de vie du bail avec celui du bien ou du locataire. |
 | Quittance PDF (`payment`) | **Agrégation côté appelant, pas d'appel réseau serveur-à-serveur** | Une quittance légale a besoin de données réparties dans 3 services (bailleur/auth, locataire/tenant, bien/property) ; plutôt que d'assouplir la convention « pas d'appel réseau entre microservices », c'est le frontend/BFF qui agrège ces informations et les transmet à `payment`, qui se limite à la mise en page PDF. |
 | Stockage des documents d'identité (`document`) | **MinIO derrière un port `FileStorage`** | Le SDK MinIO n'est jamais utilisé directement dans la couche métier : `DocumentService` dépend d'une interface `FileStorage`, implémentée par `MinioFileStorage`, ce qui permet de tester la logique métier sans instance MinIO réelle. |
+| Authentification à la Gateway | **Routage HTTP pur, pas de centralisation JWT** | Centraliser la validation à la Gateway suppose que les services ne soient joignables que via elle, ce qui n'est pas l'architecture de déploiement prévue (produit self-hosted, sans isolation réseau garantie) ; un service qui ferait confiance à un en-tête interne (ex. `X-User-Id`) serait alors trivialement usurpable en l'appelant directement. Chaque service continue de valider lui-même le JWT (defense in depth) ; le gain de centraliser (moins de code dupliqué, JWT vérifié une seule fois) ne compense pas ce risque à l'échelle du projet. |
 
 ## Questions en suspens
 
