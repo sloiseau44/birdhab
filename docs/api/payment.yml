@@ -1,0 +1,379 @@
+openapi: 3.0.3
+info:
+  title: Birdhab — Payment Service API
+  description: >
+    Service de suivi des paiements de Birdhab. Permet à un propriétaire
+    authentifié d'enregistrer les échéances de loyer d'un bail (`leaseId`,
+    service `lease`), les paiements reçus, de détecter automatiquement les
+    retards, et de générer une quittance PDF pour une échéance payée. payment
+    n'appelle jamais les services auth/tenant/property : les informations
+    bailleur/locataire/bien nécessaires à la quittance sont fournies par
+    l'appelant (agrégées côté client), payment se limitant à la mise en page
+    du PDF (Apache PDFBox) — voir CLAUDE.md.
+  version: 1.0.0
+  contact:
+    name: Birdhab
+    email: stephaneloiseau44@gmail.com
+  license:
+    name: BUSL-1.1
+
+servers:
+  - url: http://localhost:8085
+    description: Environnement local (via API Gateway ou direct)
+
+tags:
+  - name: Payments
+    description: Suivi des paiements de loyer du propriétaire authentifié
+
+paths:
+  /payments:
+    post:
+      tags: [Payments]
+      summary: Enregistrer une échéance de paiement
+      description: >
+        Crée une échéance de paiement rattachée au propriétaire authentifié
+        et à un bail existant. Le propriétaire (`ownerId`) est déterminé à
+        partir du contexte d'authentification, jamais depuis le corps de la
+        requête. `leaseId` n'est pas validé par appel réseau vers le service
+        `lease` en v1 (même convention que `owner_id` — voir CLAUDE.md).
+      operationId: createPayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '201':
+          description: Échéance créée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Requête invalide (champ manquant, paidDate sans paidAmount...)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags: [Payments]
+      summary: Lister les échéances du propriétaire authentifié
+      operationId: listPayments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des échéances du propriétaire
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /payments/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags: [Payments]
+      summary: Récupérer une échéance par son identifiant
+      operationId: getPayment
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Échéance trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Échéance introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags: [Payments]
+      summary: Modifier une échéance (notamment pour enregistrer un paiement reçu)
+      operationId: updatePayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: Échéance mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Échéance introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [Payments]
+      summary: Supprimer une échéance
+      operationId: deletePayment
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Échéance supprimée (aucun contenu)
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Échéance introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /payments/{id}/receipt:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    post:
+      tags: [Payments]
+      summary: Générer la quittance PDF d'une échéance payée
+      description: >
+        Génère un PDF de quittance pour une échéance déjà marquée payée
+        (`paidDate`/`paidAmount` renseignés). Les informations bailleur,
+        locataire et bien loué ne sont pas connues du service payment : elles
+        doivent être fournies dans le corps de la requête par l'appelant, qui
+        les a préalablement récupérées auprès des services auth/tenant/property.
+      operationId: generateReceipt
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptRequest'
+      responses:
+        '200':
+          description: Quittance PDF générée
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Requête invalide (champ manquant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Échéance introuvable ou n'appartenant pas au propriétaire authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Échéance pas encore payée, quittance impossible à générer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PaymentStatus:
+      type: string
+      description: >
+        Statut de l'échéance, dérivé de paidDate/dueDate à la lecture (non
+        persisté) : PAID si paidDate renseignée, LATE si dueDate est dépassée
+        sans paiement enregistré, PENDING sinon.
+      enum: [PENDING, PAID, LATE]
+
+    Address:
+      type: object
+      required: [street, postalCode, city]
+      properties:
+        street:
+          type: string
+          example: 12 rue des Oliviers
+        postalCode:
+          type: string
+          pattern: '^[0-9]{5}$'
+          example: '06000'
+        city:
+          type: string
+          example: Nice
+
+    ReceiptRequest:
+      type: object
+      required: [ownerFullName, ownerAddress, tenantFullName, propertyAddress]
+      properties:
+        ownerFullName:
+          type: string
+          maxLength: 200
+          example: Jean Dupont
+        ownerAddress:
+          $ref: '#/components/schemas/Address'
+        tenantFullName:
+          type: string
+          maxLength: 200
+          example: Julie Martin
+        propertyAddress:
+          $ref: '#/components/schemas/Address'
+
+    PaymentRequest:
+      type: object
+      required: [leaseId, dueDate, amount]
+      properties:
+        leaseId:
+          type: string
+          format: uuid
+          description: Identifiant du bail concerné (Lease.id du service lease)
+        dueDate:
+          type: string
+          format: date
+          example: '2026-09-01'
+        amount:
+          type: number
+          format: double
+          description: Montant attendu, en euros
+          minimum: 0
+          example: 850.00
+        paidDate:
+          type: string
+          format: date
+          nullable: true
+          description: Date de réception du paiement, absente tant que non reçu
+          example: '2026-09-03'
+        paidAmount:
+          type: number
+          format: double
+          nullable: true
+          description: Montant effectivement reçu ; doit être renseigné avec paidDate (les deux ou aucun)
+          minimum: 0
+          example: 850.00
+
+    PaymentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+          description: Identifiant du propriétaire (User.id du service auth)
+        leaseId:
+          type: string
+          format: uuid
+        dueDate:
+          type: string
+          format: date
+        amount:
+          type: number
+          format: double
+          example: 850.00
+        paidDate:
+          type: string
+          format: date
+          nullable: true
+        paidAmount:
+          type: number
+          format: double
+          nullable: true
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: Bad Request
+        message:
+          type: string
+          example: paidAmount doit être renseigné avec paidDate
+        path:
+          type: string
+          example: /payments

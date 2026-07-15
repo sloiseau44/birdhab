@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: payment-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/birdhab
+    username: birdhab
+    password: birdhab
+
+  jpa:
+    hibernate:
+      ddl-auto: validate   # le schéma est piloté par Flyway, jamais par Hibernate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: payment
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: payment   # schéma Postgres dédié : la base "birdhab" est partagée entre
+                       # microservices, mais chaque service isole ses tables et son
+                       # historique flyway_schema_history dans son propre schéma
+                       # (sinon collision avec celui du service auth, en schéma public)
+    default-schema: payment
+
+server:
+  port: 8085
+
+# Config JWT — même secret que le service auth (birdhab.jwt.secret) : payment ne
+# génère jamais de jetons, il valide uniquement ceux émis par auth.
+birdhab:
+  jwt:
+    secret: ${JWT_SECRET:changeme-local-dev-secret-key-not-for-production-use-only}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
