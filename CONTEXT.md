@@ -67,6 +67,7 @@ birdhab/
 │   ├── auth/          # Authentification, JWT, rôles, utilisateurs
 │   ├── property/      # Biens immobiliers
 │   ├── tenant/        # Locataires
+│   ├── lease/         # Baux (bien + locataire, dates, loyer, dépôt, IRL)
 │   ├── document/      # Documents, contrats, quittances PDF
 │   ├── payment/       # Paiements, loyers, relances
 │   └── gateway/       # API Gateway (point d'entrée unique)
@@ -146,7 +147,7 @@ birdhab/
 - [x] Service `auth` codé et testé (register/login/refresh/logout/me, JWT, Spring Security)
 - [x] Service `property` codé et testé (CRUD des biens)
 - [x] Service `tenant` codé et testé (CRUD des locataires)
-- [ ] Gestion des baux — architecture à trancher (nouveau service `lease` ou rattaché à `property`/`tenant`)
+- [x] Service `lease` codé et testé (CRUD des baux, statut dérivé de la date de fin)
 - [ ] Service `payment` (suivi des paiements, quittances PDF)
 - [ ] Tableau de bord
 - [ ] Périmètre MVP finalisé
@@ -170,8 +171,8 @@ birdhab/
 | Migration BDD | **Flyway** | Migrations SQL pures, simple à maintenir seul, suffisant pour le volume de schéma prévu. Liquibase apporte du rollback auto et du multi-SGBD, mais répond à des besoins (multi-équipes, multi-environnements) que le projet n'a pas en solo. |
 | Générateur PDF | **Apache PDFBox** | Licence Apache 2.0, cohérente avec la philosophie open-core du projet. iText impose une licence commerciale ou AGPL au-delà d'un usage basique, ce qui est délicat vu le modèle BUSL-1.1. |
 | Stratégie multi-tenant | **Schéma unique + `owner_id`** en clé étrangère sur toutes les tables métier | Suffisant pour du 1 à 10 biens par propriétaire ; évite la complexité opérationnelle d'un schéma par propriétaire. Migration vers du multi-schéma restera possible plus tard si besoin. |
+| Gestion des baux | **Nouveau microservice dédié `lease`** | Cohérent avec le pattern 1 service = 1 contexte borné déjà suivi pour auth/property/tenant, plutôt que de mélanger le cycle de vie du bail avec celui du bien ou du locataire. |
 
 ## Questions en suspens
 
 - [ ] Finaliser le périmètre exact du MVP
-- [ ] Gestion des baux : nouveau microservice dédié (ex. `lease`) ou rattachement à `property`/`tenant` ?
