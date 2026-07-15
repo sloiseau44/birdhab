@@ -77,16 +77,23 @@ cross-service » ci-dessus). `document` isole le SDK MinIO derrière un port
 instance MinIO réelle — ce pattern de port est à reconduire pour toute
 future dépendance à un système externe (email, paiement en ligne...).
 
-Prochaine étape suggérée : le **tableau de bord**, dernier module
-fonctionnel du MVP (loyers attendus vs perçus, biens occupés/vacants,
-alertes). Nécessitera de décider comment agréger les données de
-`property`/`tenant`/`lease`/`payment` (même question tranchée pour la
-quittance PDF : agrégation côté appelant, pas d'appel réseau serveur-à-serveur)
-et où vit ce module (nouveau service dédié, ou logique côté frontend
-consommant les API existantes via la Gateway) — à confirmer avec
-l'utilisateur avant de commencer.
+**Backend du MVP fonctionnellement complet.** Le tableau de bord (dernier
+module listé au MVP) ne nécessite aucun service supplémentaire : ses
+données (biens, statut occupé/vacant dérivé des baux actifs, loyers attendus
+vs perçus et retards dérivés de `payment`) sont déjà entièrement exposées
+par `property`/`lease`/`payment` via la Gateway. C'est une question
+d'agrégation et d'affichage côté frontend, cohérente avec la décision déjà
+prise deux fois (quittance PDF, Gateway) de ne jamais faire d'appel réseau
+serveur-à-serveur pour agréger des données inter-services.
 
-Suivre la même méthode que pour `property`/`tenant`/`lease`/`payment`/`document` :
+Prochaine étape suggérée : le **frontend** (aucune stack choisie à ce
+stade — React/Vue/Angular tous à considérer), chantier distinct du backend
+Java/Spring suivi jusqu'ici. Ne pas le démarrer sans validation explicite de
+l'utilisateur (changement de stack technique majeur, voir aussi les
+contraintes de temps disponible dans CONTEXT.md). Si un nouveau microservice
+backend s'avère malgré tout nécessaire un jour (ex. `messaging` pour le
+portail locataire, hors MVP), suivre la même méthode que pour
+`property`/`tenant`/`lease`/`payment`/`document` :
 1. Contrat OpenAPI — à proposer et faire valider avant de coder
 2. Squelette Maven du module (ajouté aux `<modules>` du pom racine si nouveau service)
 3. Entité(s) JPA + migration Flyway V1, dans un schéma Postgres dédié

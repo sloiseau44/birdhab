@@ -95,6 +95,15 @@ birdhab/
 | **Suivi des paiements** | Enregistrer un paiement, détecter les retards, générer une quittance PDF |
 | **Tableau de bord** | Loyers attendus vs perçus, biens occupés/vacants, alertes |
 
+> Le tableau de bord ne nécessite aucun backend supplémentaire : toutes les
+> données (biens, baux actifs → occupé/vacant, échéances → attendu/perçu/retard)
+> sont déjà exposées par `property`/`lease`/`payment` via la Gateway. C'est une
+> question d'agrégation et d'affichage côté frontend (même principe que la
+> quittance PDF de `payment` — voir décision « Aucune agrégation cross-service »
+> dans CLAUDE.md), pas un module backend à développer. Voir « État d'avancement »
+> : le backend du MVP est complet, le frontend est un chantier séparé, pas
+> encore démarré.
+
 ### Hors MVP (v2+)
 
 - Génération de contrats de bail PDF
@@ -151,7 +160,11 @@ birdhab/
 - [x] Service `payment` codé et testé (suivi des paiements, quittance PDF via Apache PDFBox)
 - [x] Service `document` codé et testé (upload/téléchargement des documents d'identité, stockage MinIO)
 - [x] Gateway codée et testée (Spring Cloud Gateway, routage HTTP pur, pas de centralisation JWT)
-- [ ] Tableau de bord
+- [x] **Backend du MVP fonctionnellement complet** (les 6 microservices + Gateway ci-dessus
+      couvrent l'intégralité des données nécessaires au tableau de bord — voir note
+      dans « Périmètre fonctionnel »)
+- [ ] Frontend (chantier séparé, pas encore démarré — stack à choisir ; portera le
+      tableau de bord et l'affichage des autres modules)
 - [ ] Périmètre MVP finalisé
 
 ---
