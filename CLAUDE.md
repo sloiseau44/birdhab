@@ -38,6 +38,9 @@ Un service = un contexte borné, pas de dépendance directe entre services (pass
 - Commits : Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`)
 - DTOs en `record`
 - Tests : JUnit 5 + Mockito, viser 80% de couverture minimum
+- Tests d'intégration Flyway (`FlywayMigrationIT`, un par service avec base de données) : convention `*IT.java`,
+  exécutés par `mvn verify` (failsafe) contre un Postgres réel, jamais par `mvn test` (nécessite
+  `docker compose up` localement, voir `docker/README.md`). À reproduire pour tout nouveau service avec migrations.
 - Javadoc sur toutes les classes publiques
 - Un contrat OpenAPI à jour pour chaque endpoint exposé
 
