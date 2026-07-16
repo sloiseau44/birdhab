@@ -124,6 +124,20 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Tests d'intégration (*IT.java, ex. FlywayMigrationIT) : nécessitent un
+                 Postgres réel, exécutés par `mvn verify` uniquement (pas `mvn test`) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
