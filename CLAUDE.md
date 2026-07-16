@@ -22,7 +22,7 @@
 - **Multi-tenant (propriétaires) : schéma unique**, isolation via colonne `owner_id` sur toutes les tables métier. Pas de schéma par propriétaire.
 - **Isolation Flyway par microservice : un schéma Postgres dédié par service** (ex. `property`), même si tous partagent la même base `birdhab` en local — évite la collision de `flyway_schema_history` entre services (voir `spring.flyway.schemas` dans `application.yml` de `property`). À reproduire pour chaque nouveau service.
 - **`owner_id` sans contrainte FK inter-service** : `owner_id` référence l'id d'un `User` du service `auth` par simple convention applicative (UUID), sans relation JPA ni FK SQL — cohérent avec « un service = un contexte borné » (voir Architecture). Ne pas ajouter de FK vers une table d'un autre microservice.
-- **Propagation d'identité inter-services : validation JWT dupliquée dans chaque service consommateur**, secret partagé via `JWT_SECRET` (même valeur par défaut que `auth` en local), sans appel réseau vers `auth`. Décision définitive, y compris maintenant que `gateway` existe (voir ci-dessous) : à reconduire pour chaque nouveau service (voir `services/property/.../infrastructure/jwt`).
+- **Propagation d'identité inter-services : chaque service valide lui-même le JWT**, secret partagé via `JWT_SECRET` (même valeur par défaut que `auth` en local), sans appel réseau vers `auth`. Décision définitive, y compris maintenant que `gateway` existe (voir ci-dessous). L'implémentation elle-même (`JwtAuthenticationFilter`/`JwtAuthenticationEntryPoint`/`JwtValidatorService`) est partagée dans `shared/common/.../security` depuis la suppression de la duplication entre services — mais l'indépendance de validation par service, elle, reste actée : ne pas centraliser cette vérification dans un composant appelé par les autres au runtime.
 - **`gateway` : routage HTTP pur, pas de centralisation JWT.** La Gateway route par préfixe de chemin vers chaque service sans jamais valider ni transmettre l'identité elle-même ; centraliser reviendrait à faire confiance à un en-tête interne (ex. `X-User-Id`) alors que les services restent également joignables directement (pas d'isolation réseau prévue pour un produit open-core self-hosted) — un attaquant pourrait alors forger cet en-tête en s'adressant directement au service. Ne pas revenir sur cette décision sans fermer l'accès direct aux services.
 - **Aucune agrégation cross-service côté serveur** : un service qui a besoin de données détenues par un autre (ex. la quittance PDF de `payment`, qui a besoin du nom/adresse du bailleur et du locataire) ne les récupère jamais lui-même par appel réseau ; c'est l'appelant (frontend/BFF) qui les agrège et les transmet dans le corps de la requête. Voir `docs/api/payment.yml` (`ReceiptRequest`) pour l'exemple appliqué.
 
@@ -99,6 +99,18 @@ client (falsifiable). Voir le tableau « Décisions actées » de CONTEXT.md
 pour le détail de chaque correctif — à reproduire pour tout nouveau code
 touchant à l'authentification ou à l'upload de fichiers.
 
+**Consolidation complémentaire** : un `FlywayMigrationIT` par service avec
+base de données (failsafe, `mvn verify`) comble le trou entre migrations
+Flyway et mapping JPA que les tests unitaires mockés ne couvrent pas (voir
+« Tests d'intégration Flyway » dans Conventions de code). L'infrastructure
+JWT dupliquée (`JwtService`/`JwtProperties`/`JwtAuthenticationFilter`/
+`JwtAuthenticationEntryPoint`) a été extraite vers
+`shared/common/.../security` : `JwtAuthenticationFilter`/`EntryPoint` sont
+component-scannés automatiquement partout, `JwtValidatorService`/`JwtProperties`
+sont déclarés explicitement par un petit `JwtConfig` par service (voir
+point 5 ci-dessous) pour ne pas entrer en conflit avec le `JwtService`
+propre à `auth`, qui implémente directement `JwtValidator`.
+
 Prochaine étape suggérée : le **frontend** (aucune stack choisie à ce
 stade — React/Vue/Angular tous à considérer), chantier distinct du backend
 Java/Spring suivi jusqu'ici. Ne pas le démarrer sans validation explicite de
@@ -112,8 +124,11 @@ portail locataire, hors MVP), suivre la même méthode que pour
 3. Entité(s) JPA + migration Flyway V1, dans un schéma Postgres dédié
    (voir décision « Isolation Flyway par microservice » ci-dessus)
 4. Architecture en couches identique aux services existants (domain/api/infrastructure/config)
-5. Sécurité : réutiliser le pattern de validation JWT dupliquée
-6. Tests JUnit 5 + Mockito, 80% de couverture visée
+5. Sécurité : déclarer un `JwtConfig` local exposant les beans `JwtProperties`/`JwtValidator`
+   de `shared/common` (voir `services/property/.../infrastructure/jwt/JwtConfig.java`) —
+   `JwtAuthenticationFilter`/`EntryPoint` sont déjà component-scannés automatiquement
+6. Tests JUnit 5 + Mockito, 80% de couverture visée, + un `FlywayMigrationIT`
+   (voir « Tests d'intégration Flyway » dans Conventions de code)
 
 ## Contrats API
 
