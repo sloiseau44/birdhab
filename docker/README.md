@@ -35,9 +35,14 @@ docker compose down -v
 Ces identifiants sont pour le développement local uniquement — ne jamais les
 réutiliser en environnement de production ou de recette.
 
+Le bucket MinIO `birdhab-documents` (utilisé par le service `document`) est créé
+automatiquement au démarrage de ce service s'il n'existe pas encore — aucune
+action manuelle nécessaire dans la console MinIO.
+
 ## Configuration côté Spring Boot
 
-Dans `application-local.yml` (ou `.properties`) de chaque service :
+Chaque service pointe déjà vers cette infra par défaut dans son propre
+`application.yml` (pas de profil `local` séparé) :
 
 ```yaml
 spring:
@@ -54,3 +59,8 @@ minio:
   access-key: birdhab
   secret-key: birdhab123
 ```
+
+Ces valeurs sont surchargeables via variables d'environnement (`JWT_SECRET`,
+`MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`...) sans jamais
+modifier le fichier — voir `application.yml` de chaque service pour la
+liste exacte des variables disponibles.

@@ -147,7 +147,8 @@ d'endpoint ou de champ non prévu sans mettre à jour le contrat en premier.
 `docker/docker-compose.yml` fournit PostgreSQL + MinIO pour le développement local.
 Lancer avec `cd docker && docker compose up -d`. Détails et identifiants dans `docker/README.md`.
 Chaque service applicatif tourne en direct (pas dans Docker) et se connecte à cette infra
-via un profil `local` (`application-local.yml`).
+via les valeurs par défaut déjà présentes dans son propre `application.yml` (pas de profil
+`local` séparé), surchargeables par variable d'environnement (`JWT_SECRET`, `MINIO_*`...).
 
 ## Licence
 
