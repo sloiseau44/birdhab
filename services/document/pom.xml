@@ -18,7 +18,6 @@
     <description>Stockage des documents d'identité des locataires (MinIO)</description>
 
     <properties>
-        <jjwt.version>0.12.6</jjwt.version>
         <minio.version>8.5.12</minio.version>
     </properties>
 
@@ -61,25 +60,6 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- JWT (validation uniquement : document ne génère jamais de jetons,
-             il valide ceux émis par le service auth via le secret partagé) -->
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>${jjwt.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
 
         <!-- Stockage de fichiers (MinIO, alternative souveraine à S3 — voir CLAUDE.md) -->
         <dependency>

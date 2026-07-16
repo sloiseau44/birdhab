@@ -1,6 +1,5 @@
-package com.birdhab.document.infrastructure.security;
+package com.birdhab.common.security;
 
-import com.birdhab.document.infrastructure.jwt.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -20,22 +19,29 @@ import java.util.List;
 
 /**
  * Authentifie les requêtes portant un en-tête {@code Authorization: Bearer <access token>}
- * émis par le service auth (même secret partagé, voir {@link JwtService}).
+ * émis par le service auth, via le port {@link JwtValidator} implémenté par
+ * chaque service (voir {@link JwtValidatorService} ou le {@code JwtService}
+ * propre à {@code auth}).
+ *
+ * <p>Partagé entre tous les services (voir CLAUDE.md, décision « duplication
+ * JWT extraite vers shared/common ») : component-scanné automatiquement grâce
+ * à {@code @SpringBootApplication(scanBasePackages = "com.birdhab")} sur
+ * chaque service.</p>
  *
  * <p>En cas de jeton absent, invalide ou expiré, la requête poursuit sans
  * authentification : c'est à {@code SecurityFilterChain} de décider si
  * l'endpoint requiert une authentification (401 renvoyé par
- * {@code JwtAuthenticationEntryPoint} le cas échéant).</p>
+ * {@link JwtAuthenticationEntryPoint} le cas échéant).</p>
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private final JwtService jwtService;
+    private final JwtValidator jwtValidator;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
-        this.jwtService = jwtService;
+    public JwtAuthenticationFilter(JwtValidator jwtValidator) {
+        this.jwtValidator = jwtValidator;
     }
 
     @Override
@@ -47,15 +53,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith(BEARER_PREFIX)) {
             String token = header.substring(BEARER_PREFIX.length());
             try {
-                Claims claims = jwtService.parseClaims(token);
-                if (jwtService.isAccessToken(claims)) {
-                    List<GrantedAuthority> authorities = jwtService.extractRoles(claims).stream()
+                Claims claims = jwtValidator.parseClaims(token);
+                if (jwtValidator.isAccessToken(claims)) {
+                    List<GrantedAuthority> authorities = jwtValidator.extractRoles(claims).stream()
                             .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                             .map(GrantedAuthority.class::cast)
                             .toList();
 
                     var authentication = new UsernamePasswordAuthenticationToken(
-                            jwtService.extractUserId(claims).toString(), null, authorities);
+                            jwtValidator.extractUserId(claims).toString(), null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (JwtException | IllegalArgumentException e) {

@@ -1,9 +1,8 @@
-package com.birdhab.document.infrastructure.jwt;
+package com.birdhab.common.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -11,14 +10,16 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Validation des jetons JWT émis par le service auth (jjwt).
- *
- * <p>document ne génère jamais de jeton : il se contente de vérifier la
+ * Validation des jetons JWT émis par le service {@code auth} (jjwt), pour un
+ * service qui n'émet jamais de jeton lui-même : il se contente de vérifier la
  * signature (secret partagé avec auth) et d'en extraire l'identité de
- * l'appelant, faisant ainsi office d'{@code owner_id}.</p>
+ * l'appelant, faisant ainsi office d'{@code owner_id}.
+ *
+ * <p>N'est pas enregistrée automatiquement comme {@code @Component} (voir
+ * {@link JwtProperties}) : chaque service consommateur la déclare
+ * explicitement en bean.</p>
  */
-@Service
-public class JwtService {
+public class JwtValidatorService implements JwtValidator {
 
     private static final String CLAIM_TYPE = "type";
     private static final String CLAIM_ROLES = "roles";
@@ -26,15 +27,11 @@ public class JwtService {
 
     private final SecretKey key;
 
-    public JwtService(JwtProperties properties) {
+    public JwtValidatorService(JwtProperties properties) {
         this.key = Keys.hmacShaKeyFor(properties.getSecret().getBytes(StandardCharsets.UTF_8));
     }
 
-    /**
-     * Parse et valide la signature/expiration du jeton.
-     *
-     * @throws io.jsonwebtoken.JwtException si le jeton est invalide, malformé ou expiré
-     */
+    @Override
     public Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(key)
@@ -43,15 +40,18 @@ public class JwtService {
                 .getPayload();
     }
 
+    @Override
     public UUID extractUserId(Claims claims) {
         return UUID.fromString(claims.getSubject());
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public List<String> extractRoles(Claims claims) {
         return (List<String>) claims.get(CLAIM_ROLES, List.class);
     }
 
+    @Override
     public boolean isAccessToken(Claims claims) {
         return TYPE_ACCESS.equals(claims.get(CLAIM_TYPE, String.class));
     }

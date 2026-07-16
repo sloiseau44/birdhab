@@ -1,4 +1,4 @@
-package com.birdhab.payment.infrastructure.security;
+package com.birdhab.common.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,13 +13,15 @@ import java.io.IOException;
 import java.time.Instant;
 
 /**
- * Renvoie une erreur JSON (même forme que {@code ErrorResponse} de l'API)
- * lorsqu'une requête non authentifiée cible un endpoint protégé.
+ * Renvoie une erreur JSON (même forme que le DTO {@code ErrorResponse} de
+ * chaque service) lorsqu'une requête non authentifiée cible un endpoint
+ * protégé. Partagé entre tous les services (voir CLAUDE.md, décision
+ * « duplication JWT extraite vers shared/common »).
  *
  * <p>Ce composant intervient en amont du {@code DispatcherServlet} : il ne
- * peut donc pas dépendre du DTO {@code ErrorResponse} de la couche api sans
- * inverser le sens de dépendance entre couches ; la forme du corps est donc
- * reproduite localement.</p>
+ * peut donc pas dépendre du DTO {@code ErrorResponse} de la couche api de
+ * chaque service sans inverser le sens de dépendance entre couches ; la
+ * forme du corps est donc reproduite localement.</p>
  */
 @Component
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {

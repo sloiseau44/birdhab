@@ -17,10 +17,6 @@
     <name>Birdhab — Lease Service</name>
     <description>Gestion des baux</description>
 
-    <properties>
-        <jjwt.version>0.12.6</jjwt.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.birdhab</groupId>
@@ -60,25 +56,6 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- JWT (validation uniquement : lease ne génère jamais de jetons,
-             il valide ceux émis par le service auth via le secret partagé) -->
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>${jjwt.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
 
         <!-- OpenAPI / Swagger UI -->
         <dependency>

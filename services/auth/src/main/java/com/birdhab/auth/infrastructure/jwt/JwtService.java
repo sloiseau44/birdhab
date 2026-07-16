@@ -2,6 +2,7 @@ package com.birdhab.auth.infrastructure.jwt;
 
 import com.birdhab.auth.domain.entity.Role;
 import com.birdhab.auth.domain.entity.User;
+import com.birdhab.common.security.JwtValidator;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -20,10 +21,14 @@ import java.util.stream.Collectors;
  *
  * <p>Le claim {@code type} distingue un access token d'un refresh token afin
  * d'éviter qu'un access token soit utilisé à la place d'un refresh token
- * (et inversement).</p>
+ * (et inversement). Implémente {@link JwtValidator} pour pouvoir être injecté
+ * dans le {@code JwtAuthenticationFilter} partagé (voir shared/common) au même
+ * titre que les {@code JwtValidatorService} des autres services : auth est le
+ * seul à aussi émettre des jetons, d'où ce {@code JwtService} propre plutôt
+ * que la réutilisation directe de {@code JwtValidatorService}.</p>
  */
 @Service
-public class JwtService {
+public class JwtService implements JwtValidator {
 
     private static final String CLAIM_TYPE = "type";
     private static final String CLAIM_ROLES = "roles";
@@ -70,6 +75,7 @@ public class JwtService {
      *
      * @throws JwtException si le jeton est invalide, malformé ou expiré
      */
+    @Override
     public Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(key)
@@ -78,15 +84,18 @@ public class JwtService {
                 .getPayload();
     }
 
+    @Override
     public UUID extractUserId(Claims claims) {
         return UUID.fromString(claims.getSubject());
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public List<String> extractRoles(Claims claims) {
         return (List<String>) claims.get(CLAIM_ROLES, List.class);
     }
 
+    @Override
     public boolean isAccessToken(Claims claims) {
         return TYPE_ACCESS.equals(claims.get(CLAIM_TYPE, String.class));
     }

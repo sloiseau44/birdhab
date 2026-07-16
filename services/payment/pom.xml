@@ -18,7 +18,6 @@
     <description>Suivi des paiements de loyer et génération de quittances PDF</description>
 
     <properties>
-        <jjwt.version>0.12.6</jjwt.version>
         <pdfbox.version>3.0.3</pdfbox.version>
     </properties>
 
@@ -61,25 +60,6 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- JWT (validation uniquement : payment ne génère jamais de jetons,
-             il valide ceux émis par le service auth via le secret partagé) -->
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>${jjwt.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
 
         <!-- Génération de la quittance PDF (licence Apache 2.0, voir CONTEXT.md) -->
         <dependency>

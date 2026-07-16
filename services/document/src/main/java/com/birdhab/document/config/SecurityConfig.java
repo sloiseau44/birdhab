@@ -1,7 +1,7 @@
 package com.birdhab.document.config;
 
-import com.birdhab.document.infrastructure.security.JwtAuthenticationEntryPoint;
-import com.birdhab.document.infrastructure.security.JwtAuthenticationFilter;
+import com.birdhab.common.security.JwtAuthenticationEntryPoint;
+import com.birdhab.common.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
