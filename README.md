@@ -34,6 +34,53 @@ Cette commande est indépendante de `docker/docker-compose.yml`, qui ne fournit 
 l'infra pour le développement au quotidien (voir « Démarrer en local » plus bas) — ne
 pas lancer les deux en même temps, ils utilisent les mêmes noms de conteneurs.
 
+## Déploiement gratuit sur le web (Render)
+
+Pour une instance accessible en permanence (utile si des locataires doivent pouvoir se
+connecter), sans rien installer sur ta machine, `render.yaml` décrit un déploiement
+gratuit sur [Render](https://render.com). Comme le tier gratuit de Render supprime sa
+base Postgres après 30 jours (+ 14 de grâce) et ne permet pas de disque persistant pour
+MinIO, la base de données et le stockage de documents restent **externes à Render**,
+sur deux autres services gratuits :
+
+1. **Base de données** : crée un projet Postgres gratuit sur [Neon](https://neon.tech)
+   (gratuit à vie, sans expiration). Note l'hôte, le nom de la base, l'utilisateur et le
+   mot de passe depuis son tableau de bord.
+2. **Stockage des documents** : crée un bucket sur [Cloudflare R2](https://developers.cloudflare.com/r2/)
+   (10 Go gratuits à vie, compatible S3 — le code parle déjà ce protocole via le SDK
+   MinIO, aucune modification de code nécessaire). Note l'endpoint S3
+   (`https://<account-id>.r2.cloudflarestorage.com`), la clé d'accès et la clé secrète
+   d'un jeton d'API R2.
+   > Non testé de bout en bout par manque d'accès à un vrai compte Cloudflare — signale
+   > tout souci de compatibilité si tu rencontres une erreur au premier upload.
+3. **Déploiement** : sur Render, « New » → « Blueprint », pointer vers ce repo. Render
+   détecte `render.yaml` et propose de créer les 8 services (6 microservices + Gateway +
+   frontend), chacun sur le plan gratuit.
+4. Pendant la création, Render demande une valeur pour chaque variable marquée
+   `sync: false` dans `render.yaml` :
+   - Sur `birdhab-auth`, `birdhab-property`, `birdhab-tenant`, `birdhab-lease`,
+     `birdhab-payment`, `birdhab-document` : `SPRING_DATASOURCE_URL` (au format
+     `jdbc:postgresql://<hôte-neon>/<base>?sslmode=require`), `SPRING_DATASOURCE_USERNAME`,
+     `SPRING_DATASOURCE_PASSWORD` (depuis Neon) et `JWT_SECRET` (une valeur générée par
+     toi, ex. `openssl rand -base64 32` — **la même valeur sur les 6 services**, sinon la
+     validation des jetons échoue entre services).
+   - Sur `birdhab-document` en plus : `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`,
+     `MINIO_SECRET_KEY` (depuis Cloudflare R2).
+5. Une fois ces 6 services déployés, Render affiche leur URL publique
+   (`https://birdhab-auth.onrender.com`, etc.) dans le tableau de bord. Reporte-les dans
+   les variables `AUTH_SERVICE_URL`, `PROPERTY_SERVICE_URL`... de `birdhab-gateway`
+   (menu du service → Environment), puis fais de même pour `GATEWAY_URL` sur
+   `birdhab-frontend` avec l'URL de `birdhab-gateway`.
+6. Application accessible sur l'URL publique de `birdhab-frontend`.
+
+Sur le tier gratuit, chaque service se met en veille après 15 minutes sans trafic
+(réveil en ~1 minute à la requête suivante) — sans coût, mais avec ce délai occasionnel.
+
+> Cette configuration a été vérifiée service par service contre la documentation
+> officielle de Render (syntaxe `render.yaml`, limites du tier gratuit), mais pas
+> déployée de bout en bout faute de compte Render/Neon/Cloudflare disponible pour le
+> faire. Si une étape ne se passe pas comme décrit, partage l'erreur pour qu'on l'ajuste.
+
 ## Stack technique
 
 | Composant | Technologie |

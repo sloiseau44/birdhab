@@ -10,8 +10,10 @@ server {
     }
 
     # Même contrat que le proxy du serveur de dev Vite (vite.config.ts) : /api/xxx -> Gateway /xxx
+    # GATEWAY_URL substitué au démarrage du conteneur (voir Dockerfile) : "http://gateway:8080"
+    # en Docker Compose local, l'URL publique Render (https://...) en déploiement Render.
     location /api/ {
-        proxy_pass http://gateway:8080/;
+        proxy_pass ${GATEWAY_URL}/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

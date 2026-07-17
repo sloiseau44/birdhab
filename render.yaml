@@ -1,0 +1,151 @@
+# Blueprint Render pour un déploiement gratuit du bundle tout-en-un (voir
+# "Déploiement gratuit (Render)" dans le README racine pour le guide pas-à-pas complet,
+# y compris pourquoi Postgres/MinIO sont externes à Render sur cette configuration).
+#
+# Contrairement à docker-compose.yml (build générique paramétré par --build-arg), Render
+# ne supporte pas les build args dans son render.yaml : chaque service backend a donc son
+# propre Dockerfile figé (docker/<service>.Dockerfile), généré depuis le même modèle.
+#
+# Toutes les variables marquées `sync: false` sont à renseigner à la main lors du premier
+# déploiement (dans l'interface Render), pas dans ce fichier — jamais de secret en clair
+# dans le repo.
+
+services:
+  - name: birdhab-auth
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: docker/auth.Dockerfile
+    dockerContext: .
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  - name: birdhab-property
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: docker/property.Dockerfile
+    dockerContext: .
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  - name: birdhab-tenant
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: docker/tenant.Dockerfile
+    dockerContext: .
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  - name: birdhab-lease
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: docker/lease.Dockerfile
+    dockerContext: .
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  - name: birdhab-payment
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: docker/payment.Dockerfile
+    dockerContext: .
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  - name: birdhab-document
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: docker/document.Dockerfile
+    dockerContext: .
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MINIO_ENDPOINT
+        sync: false
+      - key: MINIO_ACCESS_KEY
+        sync: false
+      - key: MINIO_SECRET_KEY
+        sync: false
+
+  # Pas de JWT_SECRET ici : la Gateway route sans jamais valider ni transmettre l'identité
+  # (voir décision "gateway : routage HTTP pur" dans CLAUDE.md).
+  - name: birdhab-gateway
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: docker/gateway.Dockerfile
+    dockerContext: .
+    envVars:
+      # URLs publiques Render des 6 services ci-dessus (https://birdhab-xxx.onrender.com) :
+      # à renseigner après leur premier déploiement, une fois leur URL réelle connue —
+      # voir le guide de déploiement dans le README racine.
+      - key: AUTH_SERVICE_URL
+        sync: false
+      - key: PROPERTY_SERVICE_URL
+        sync: false
+      - key: TENANT_SERVICE_URL
+        sync: false
+      - key: LEASE_SERVICE_URL
+        sync: false
+      - key: PAYMENT_SERVICE_URL
+        sync: false
+      - key: DOCUMENT_SERVICE_URL
+        sync: false
+
+  - name: birdhab-frontend
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: frontend/Dockerfile
+    dockerContext: frontend
+    envVars:
+      # URL publique Render de birdhab-gateway (https://birdhab-gateway.onrender.com),
+      # à renseigner une fois son URL réelle connue.
+      - key: GATEWAY_URL
+        sync: false
