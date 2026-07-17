@@ -9,7 +9,7 @@ import { LeasesPage } from './pages/LeasesPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { DocumentsPage } from './pages/DocumentsPage'
-import { ComingSoonPage } from './pages/ComingSoonPage'
+import { DashboardPage } from './pages/DashboardPage'
 
 function App() {
   return (
@@ -22,7 +22,7 @@ function App() {
           <RequireAuth>
             <AppLayout>
               <Routes>
-                <Route path="/" element={<ComingSoonPage title="Tableau de bord" />} />
+                <Route path="/" element={<DashboardPage />} />
                 <Route path="/properties" element={<PropertiesPage />} />
                 <Route path="/tenants" element={<TenantsPage />} />
                 <Route path="/leases" element={<LeasesPage />} />
