@@ -163,10 +163,13 @@ birdhab/
 - [x] **Backend du MVP fonctionnellement complet** (les 6 microservices + Gateway ci-dessus
       couvrent l'intégralité des données nécessaires au tableau de bord — voir note
       dans « Périmètre fonctionnel »)
+- [x] Adresse postale ajoutée au profil `auth` (`PUT /auth/me`, migration V3) — trou détecté
+      en construisant le flux de quittance PDF côté frontend, comblé avant de continuer
 - [x] Frontend démarré (`frontend/` — React 18 + Vite + TypeScript + Tailwind v3) :
-      authentification complète, modules Biens, Locataires et Baux en CRUD complet,
-      vérifiés de bout en bout dans le navigateur
-- [ ] Frontend : modules restants (paiements + quittance PDF, documents, tableau de bord)
+      authentification complète, page Mon profil, modules Biens, Locataires, Baux et
+      Paiements (avec génération réelle de quittance PDF) en CRUD complet, tous vérifiés
+      de bout en bout dans le navigateur
+- [ ] Frontend : modules restants (documents, tableau de bord)
 - [ ] Périmètre MVP finalisé
 
 ---
@@ -200,6 +203,7 @@ birdhab/
 | Stack frontend | **React 18 + Vite + TypeScript + Tailwind CSS v3, react-router-dom v6** | React choisi pour l'objectif « book technique » (stack la plus demandée côté recrutement). Tailwind v4 et react-router-dom v7 écartés délibérément : leurs dépendances natives/outillage exigent Node ≥ 20, incompatible avec le poste de développement (Node 18.16) — v3/v6 sont les dernières versions majeures pleinement compatibles Node 18. À remonter dès que Node est mis à jour. |
 | Jetons JWT côté frontend | **Stockés en `localStorage`, pas de cookie httpOnly** | Compromis pragmatique pour une SPA sans BFF : un cookie httpOnly nécessiterait un backend dédié à la gestion de session, hors scope actuel. Accepté en connaissance du risque XSS ; à revoir si un BFF est introduit un jour. |
 | Types TypeScript frontend | **Générés depuis les contrats OpenAPI existants (`openapi-typescript`), jamais écrits à la main** | Réutilise le travail déjà fait sur `docs/api/*.yml` plutôt que de dupliquer la définition des DTOs côté frontend ; a aussi révélé que plusieurs schémas `*Response` ne déclaraient aucun champ `required` alors que le backend les renvoie toujours (corrigé, voir commit `feat: démarrer le frontend`). |
+| Adresse du propriétaire (`auth`) | **Ajoutée a posteriori via `PUT /auth/me`, pas à l'inscription** | La quittance PDF (`payment`) a besoin de l'adresse du bailleur, absente du modèle `User` jusqu'ici — trou détecté en construisant le module Paiements du frontend. Plutôt que de l'exiger à l'inscription (alourdit ce flux pour une donnée seulement utile au moment de générer une quittance), elle se renseigne via une page « Mon profil » dédiée, colonnes nullable en base. |
 
 ## Questions en suspens
 

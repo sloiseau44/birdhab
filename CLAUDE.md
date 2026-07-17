@@ -26,6 +26,7 @@
 - **Propagation d'identité inter-services : chaque service valide lui-même le JWT**, secret partagé via `JWT_SECRET` (même valeur par défaut que `auth` en local), sans appel réseau vers `auth`. Décision définitive, y compris maintenant que `gateway` existe (voir ci-dessous). L'implémentation elle-même (`JwtAuthenticationFilter`/`JwtAuthenticationEntryPoint`/`JwtValidatorService`) est partagée dans `shared/common/.../security` depuis la suppression de la duplication entre services — mais l'indépendance de validation par service, elle, reste actée : ne pas centraliser cette vérification dans un composant appelé par les autres au runtime.
 - **`gateway` : routage HTTP pur, pas de centralisation JWT.** La Gateway route par préfixe de chemin vers chaque service sans jamais valider ni transmettre l'identité elle-même ; centraliser reviendrait à faire confiance à un en-tête interne (ex. `X-User-Id`) alors que les services restent également joignables directement (pas d'isolation réseau prévue pour un produit open-core self-hosted) — un attaquant pourrait alors forger cet en-tête en s'adressant directement au service. Ne pas revenir sur cette décision sans fermer l'accès direct aux services.
 - **Aucune agrégation cross-service côté serveur** : un service qui a besoin de données détenues par un autre (ex. la quittance PDF de `payment`, qui a besoin du nom/adresse du bailleur et du locataire) ne les récupère jamais lui-même par appel réseau ; c'est l'appelant (frontend/BFF) qui les agrège et les transmet dans le corps de la requête. Voir `docs/api/payment.yml` (`ReceiptRequest`) pour l'exemple appliqué.
+- **Adresse postale sur `User` (`auth`) : ajoutée a posteriori, pas à l'inscription.** `RegisterRequest` ne demande toujours que email/mot de passe/prénom/nom ; l'adresse (nécessaire pour la quittance PDF) se renseigne via `PUT /auth/me`, colonnes nullable en base. Ne pas rendre l'adresse obligatoire à l'inscription : ça alourdirait ce flux pour une donnée qui n'est utile qu'au moment de générer une quittance.
 - **Frontend : Tailwind CSS v3 (pas v4), react-router-dom v6 (pas v7).** Ces versions plus récentes exigent Node ≥ 20 (le moteur natif `@tailwindcss/oxide` de Tailwind v4 en particulier), incompatible avec le poste de développement actuel (Node 18.16). Remonter à ces versions dès que Node est mis à jour — voir `frontend/README.md`.
 
 ## Architecture
@@ -116,31 +117,42 @@ propre à `auth`, qui implémente directement `JwtValidator`.
 **Frontend démarré** (`frontend/`, React 18 + Vite + TypeScript + Tailwind v3,
 voir décisions ci-dessus et `frontend/README.md`). En place : authentification
 complète (login/register/logout, JWT en localStorage, rafraîchissement
-automatique sur 401, garde de route), layout avec navigation, et les modules
-**Biens** (`src/pages/PropertiesPage.tsx`, gabarit initial), **Locataires**
-(`src/pages/TenantsPage.tsx`, avec champs facultatifs téléphone/adresse — voir
-comment `TenantsPage` omet l'adresse de la requête si tous ses sous-champs
-sont vides) et **Baux** (`src/pages/LeasesPage.tsx`, avec `propertyId`/`tenantId`
-présentés en listes déroulantes à libellé lisible — adresse du bien, nom du
-locataire — plutôt qu'en champs UUID bruts, résolues via des `Map` construites
-depuis `useQuery` sur `properties`/`tenants` ; bouton de création désactivé
-tant qu'aucun bien/locataire n'existe) en CRUD complet. Vérifié de bout en
-bout dans un vrai navigateur à chaque fois (pas seulement au build) :
-inscription → connexion auto → CRUD réel via Gateway → service → Postgres →
-déconnexion → garde de route.
+automatique sur 401, garde de route), page **Mon profil**
+(`src/pages/ProfilePage.tsx` : prénom/nom/adresse via `PUT /auth/me`,
+`AuthContext.refreshUser()` pour resynchroniser après enregistrement), layout
+avec navigation, et les modules **Biens** (`src/pages/PropertiesPage.tsx`,
+gabarit initial), **Locataires** (`src/pages/TenantsPage.tsx`, avec champs
+facultatifs téléphone/adresse — voir comment `TenantsPage` omet l'adresse de
+la requête si tous ses sous-champs sont vides), **Baux**
+(`src/pages/LeasesPage.tsx`, avec `propertyId`/`tenantId` présentés en listes
+déroulantes à libellé lisible — adresse du bien, nom du locataire — plutôt
+qu'en champs UUID bruts, résolues via des `Map` construites depuis
+`useQuery` sur `properties`/`tenants` ; bouton de création désactivé tant
+qu'aucun bien/locataire n'existe) et **Paiements**
+(`src/pages/PaymentsPage.tsx`, avec le flux de génération de quittance PDF :
+bouton visible uniquement sur une échéance `PAID`, agrège côté client le
+profil du propriétaire, le bail/bien/locataire résolus comme dans
+`LeasesPage` mais à un niveau de plus — payment → lease → property/tenant —
+puis `POST /payments/{id}/receipt` en `responseType: 'blob'` pour déclencher
+le téléchargement ; voir décision « Aucune agrégation cross-service »
+ci-dessus, et le commit `feat(auth): ajouter l'adresse postale du
+propriétaire` pour le trou qu'il a fallu combler côté backend en cours de
+route) en CRUD complet. Vérifié de bout en bout dans un vrai navigateur à
+chaque fois (pas seulement au build) : inscription → connexion auto → CRUD
+réel via Gateway → service → Postgres → déconnexion → garde de route ; pour
+Paiements, génération réelle d'un PDF confirmée par inspection réseau
+(200 OK, contenu binaire).
 
 Prochaine étape suggérée : construire les modules restants sur le même
-gabarit — **Paiements** (avec le flux de
-génération de quittance PDF : le frontend doit agréger nom/adresse du
-bailleur via `/auth/me`, nom du locataire via `tenant`, adresse du bien via
-`property`, puis appeler `POST /payments/{id}/receipt`, voir décision
-« Aucune agrégation cross-service » ci-dessus — même pattern de résolution de
-libellés que `LeasesPage` pour afficher le bail concerné), **Documents**
-(upload multipart), et le **tableau de bord** (agrégation property/lease/payment
-côté client, voir CONTEXT.md). Chaque module suit le même schéma que
-`PropertiesPage.tsx` : fichier `src/api/<module>.ts` typé depuis
-`src/types/api/<service>.ts`, page avec `useQuery`/`useMutation`
-(TanStack Query), formulaire de création/édition, table de liste.
+gabarit — **Documents** (upload multipart) et le **tableau de bord**
+(agrégation property/lease/payment côté client, voir CONTEXT.md). Chaque
+module suit le même schéma que `PropertiesPage.tsx` : fichier
+`src/api/<module>.ts` typé depuis `src/types/api/<service>.ts`, page avec
+`useQuery`/`useMutation` (TanStack Query), formulaire de création/édition,
+table de liste. Avant de commencer un module qui dépend de données d'un
+autre service (comme Paiements dépendait de l'adresse du propriétaire),
+vérifier que toutes les données nécessaires existent bien côté backend —
+ne pas supposer que le contrat OpenAPI actuel est complet.
 
 Si un nouveau microservice backend s'avère nécessaire un jour (ex.
 `messaging` pour le portail locataire, hors MVP), suivre la même méthode que
