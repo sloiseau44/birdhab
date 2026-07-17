@@ -59,119 +59,45 @@ Tout le reste (v2+, Enterprise) est hors scope tant que non demandé expliciteme
 
 ## Prochaine tâche pour Claude Code
 
-Les services `auth` (register/login/refresh/logout/me, JWT, Spring Security),
-`property` (CRUD des biens), `tenant` (CRUD locataires), `lease` (CRUD baux),
-`payment` (suivi des paiements, quittance PDF) et `document` (upload des
-documents d'identité, stockage MinIO) sont entièrement implémentés et testés
-(JUnit 5 + Mockito, couverture visée 80%, 100% atteint sur `TenantService`,
-`LeaseService`, `PaymentService`, `ReceiptPdfGenerator` et `DocumentService`).
-`gateway` est également en place (Spring Cloud Gateway, routage HTTP pur par
-préfixe de chemin vers chaque service — voir décision ci-dessus) ; pas de
-couche domaine à tester, vérifié par un test de contexte sur les routes
-configurées et manuellement de bout en bout (property + gateway lancés
-localement, requête routée avec succès).
+**MVP complet, backend et frontend, de bout en bout.** Les 6 microservices
+(`auth`, `property`, `tenant`, `lease`, `payment`, `document`) + `gateway`
+sont implémentés et testés (JUnit 5 + Mockito, `FlywayMigrationIT` par
+service avec base de données). Le frontend (`frontend/`, React 18 + Vite +
+TypeScript + Tailwind v3) couvre l'authentification, le profil propriétaire,
+et les 5 modules CRUD (Biens, Locataires, Baux, Paiements avec génération
+réelle de quittance PDF, Documents) plus le tableau de bord — chacun vérifié
+de bout en bout dans un vrai navigateur, pas seulement au build. Pour le
+détail de chaque module/décision, voir `git log` (les messages de commit
+documentent le raisonnement) et le tableau « Décisions actées » de
+CONTEXT.md — cette section ne duplique plus l'historique, qui change trop
+vite pour rester à jour ici.
 
-Hors périmètre v1 : calcul automatique de la révision IRL et génération du
-contrat de bail PDF (`lease`), rattachement d'un document à un bail
-(`document`). Le statut d'un bail (`ACTIVE`/`TERMINATED`) et celui d'une
-échéance (`PENDING`/`PAID`/`LATE`) sont dérivés à la lecture plutôt que
-persistés. La quittance PDF de `payment` ne va jamais chercher elle-même les
-informations bailleur/locataire/bien auprès des autres services : l'appelant
-les fournit dans `ReceiptRequest` (voir décision « Aucune agrégation
-cross-service » ci-dessus). `document` isole le SDK MinIO derrière un port
-`FileStorage` (domain/storage), pour garder `DocumentService` testable sans
-instance MinIO réelle — ce pattern de port est à reconduire pour toute
-future dépendance à un système externe (email, paiement en ligne...).
+**Patterns à reproduire pour tout nouveau code :**
+- Nouveau microservice backend : contrat OpenAPI d'abord, schéma Postgres
+  dédié, couches domain/api/infrastructure/config, `JwtConfig` local
+  exposant les beans partagés de `shared/common` (voir
+  `services/property/.../infrastructure/jwt/JwtConfig.java`), tests JUnit 5
+  + Mockito + `FlywayMigrationIT`.
+- Nouveau module frontend CRUD : `src/api/<module>.ts` typé depuis
+  `src/types/api/<service>.ts` (régénéré via `openapi-typescript` si le
+  contrat change), page avec `useQuery`/`useMutation`, formulaire +
+  table de liste (voir `PropertiesPage.tsx` comme gabarit) ; résoudre les
+  références inter-entités (ex. `propertyId`) via des `Map` construites
+  depuis `useQuery` plutôt que d'afficher des UUID bruts (voir
+  `LeasesPage.tsx`) ; vérifier dans un vrai navigateur, pas seulement au
+  build — un module a déjà révélé un vrai trou backend (adresse du
+  propriétaire manquante) que `tsc`/`eslint` ne pouvaient pas détecter.
+- Toute donnée agrégée depuis plusieurs services (quittance PDF, tableau de
+  bord) : jamais d'appel réseau serveur-à-serveur, toujours côté appelant
+  (voir décision « Aucune agrégation cross-service »).
 
-**Backend du MVP fonctionnellement complet.** Le tableau de bord (dernier
-module listé au MVP) ne nécessite aucun service supplémentaire : ses
-données (biens, statut occupé/vacant dérivé des baux actifs, loyers attendus
-vs perçus et retards dérivés de `payment`) sont déjà entièrement exposées
-par `property`/`lease`/`payment` via la Gateway. C'est une question
-d'agrégation et d'affichage côté frontend, cohérente avec la décision déjà
-prise deux fois (quittance PDF, Gateway) de ne jamais faire d'appel réseau
-serveur-à-serveur pour agréger des données inter-services.
-
-**Revue de sécurité menée sur les 6 services + gateway, 3 correctifs appliqués** :
-canal temporel au login (`auth` vérifie désormais le mot de passe même si
-l'email est inconnu, contre un hash factice), refresh tokens hachés SHA-256
-en base au lieu du clair (`RefreshToken.tokenHash`, migration
-`V2__hash_refresh_tokens.sql`), type de fichier de `document` détecté par
-signature d'octets réels plutôt que par le `Content-Type` déclaré par le
-client (falsifiable). Voir le tableau « Décisions actées » de CONTEXT.md
-pour le détail de chaque correctif — à reproduire pour tout nouveau code
-touchant à l'authentification ou à l'upload de fichiers.
-
-**Consolidation complémentaire** : un `FlywayMigrationIT` par service avec
-base de données (failsafe, `mvn verify`) comble le trou entre migrations
-Flyway et mapping JPA que les tests unitaires mockés ne couvrent pas (voir
-« Tests d'intégration Flyway » dans Conventions de code). L'infrastructure
-JWT dupliquée (`JwtService`/`JwtProperties`/`JwtAuthenticationFilter`/
-`JwtAuthenticationEntryPoint`) a été extraite vers
-`shared/common/.../security` : `JwtAuthenticationFilter`/`EntryPoint` sont
-component-scannés automatiquement partout, `JwtValidatorService`/`JwtProperties`
-sont déclarés explicitement par un petit `JwtConfig` par service (voir
-point 5 ci-dessous) pour ne pas entrer en conflit avec le `JwtService`
-propre à `auth`, qui implémente directement `JwtValidator`.
-
-**Frontend démarré** (`frontend/`, React 18 + Vite + TypeScript + Tailwind v3,
-voir décisions ci-dessus et `frontend/README.md`). En place : authentification
-complète (login/register/logout, JWT en localStorage, rafraîchissement
-automatique sur 401, garde de route), page **Mon profil**
-(`src/pages/ProfilePage.tsx` : prénom/nom/adresse via `PUT /auth/me`,
-`AuthContext.refreshUser()` pour resynchroniser après enregistrement), layout
-avec navigation, et les modules **Biens** (`src/pages/PropertiesPage.tsx`,
-gabarit initial), **Locataires** (`src/pages/TenantsPage.tsx`, avec champs
-facultatifs téléphone/adresse — voir comment `TenantsPage` omet l'adresse de
-la requête si tous ses sous-champs sont vides), **Baux**
-(`src/pages/LeasesPage.tsx`, avec `propertyId`/`tenantId` présentés en listes
-déroulantes à libellé lisible — adresse du bien, nom du locataire — plutôt
-qu'en champs UUID bruts, résolues via des `Map` construites depuis
-`useQuery` sur `properties`/`tenants` ; bouton de création désactivé tant
-qu'aucun bien/locataire n'existe) et **Paiements**
-(`src/pages/PaymentsPage.tsx`, avec le flux de génération de quittance PDF :
-bouton visible uniquement sur une échéance `PAID`, agrège côté client le
-profil du propriétaire, le bail/bien/locataire résolus comme dans
-`LeasesPage` mais à un niveau de plus — payment → lease → property/tenant —
-puis `POST /payments/{id}/receipt` en `responseType: 'blob'` pour déclencher
-le téléchargement ; voir décision « Aucune agrégation cross-service »
-ci-dessus, et le commit `feat(auth): ajouter l'adresse postale du
-propriétaire` pour le trou qu'il a fallu combler côté backend en cours de
-route) et **Documents** (`src/pages/DocumentsPage.tsx` : pas d'édition, le
-backend n'expose pas de `PUT /documents/{id}` — seulement upload
-multipart/form-data, téléchargement et suppression ; téléchargement en
-`responseType: 'blob'`, même pattern que la quittance PDF) en CRUD complet
-(CRD pour Documents). Vérifié de bout en bout dans un vrai navigateur à
-chaque fois (pas seulement au build) : inscription → connexion auto → CRUD
-réel via Gateway → service → Postgres/MinIO → déconnexion → garde de route ;
-pour Paiements et Documents, contenu binaire réel confirmé par inspection
-réseau (200 OK) — upload testé en injectant un fichier via `DataTransfer`
-en JS (pas de sélecteur de fichier natif dans l'environnement de test).
-
-Prochaine étape suggérée : le **tableau de bord** (agrégation
-property/lease/payment côté client, voir CONTEXT.md), dernier module
-frontend du MVP. Contrairement aux modules précédents, ce n'est pas un
-simple CRUD sur un contrat OpenAPI existant : il faut décider comment
-présenter loyers attendus vs perçus, biens occupés/vacants et alertes de
-retard à partir des données déjà chargées par les autres modules (`leases`,
-`payments`, `properties`). Avant de commencer un module qui dépend de
-données d'un autre service (comme Paiements dépendait de l'adresse du
-propriétaire), vérifier que toutes les données nécessaires existent bien
-côté backend — ne pas supposer que le contrat OpenAPI actuel est complet.
-
-Si un nouveau microservice backend s'avère nécessaire un jour (ex.
-`messaging` pour le portail locataire, hors MVP), suivre la même méthode que
-pour `property`/`tenant`/`lease`/`payment`/`document` :
-1. Contrat OpenAPI — à proposer et faire valider avant de coder
-2. Squelette Maven du module (ajouté aux `<modules>` du pom racine si nouveau service)
-3. Entité(s) JPA + migration Flyway V1, dans un schéma Postgres dédié
-   (voir décision « Isolation Flyway par microservice » ci-dessus)
-4. Architecture en couches identique aux services existants (domain/api/infrastructure/config)
-5. Sécurité : déclarer un `JwtConfig` local exposant les beans `JwtProperties`/`JwtValidator`
-   de `shared/common` (voir `services/property/.../infrastructure/jwt/JwtConfig.java`) —
-   `JwtAuthenticationFilter`/`EntryPoint` sont déjà component-scannés automatiquement
-6. Tests JUnit 5 + Mockito, 80% de couverture visée, + un `FlywayMigrationIT`
-   (voir « Tests d'intégration Flyway » dans Conventions de code)
+**Chantiers restants, aucun n'est urgent — à discuter avant de commencer :**
+- Node du poste de dev est en 18.16 ; le mettre à jour débloquerait Tailwind
+  v4 et react-router-dom v7 (voir décision « Frontend : Tailwind v3... » ci-dessus).
+- Portail locataire, encadrement des loyers, intégrations comptables et
+  autres fonctionnalités v2+/Enterprise listées dans CONTEXT.md — hors
+  scope tant que non demandées explicitement.
+- Déploiement / mise en production — aucune décision prise à ce stade.
 
 ## Contrats API
 

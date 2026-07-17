@@ -95,14 +95,12 @@ birdhab/
 | **Suivi des paiements** | Enregistrer un paiement, détecter les retards, générer une quittance PDF |
 | **Tableau de bord** | Loyers attendus vs perçus, biens occupés/vacants, alertes |
 
-> Le tableau de bord ne nécessite aucun backend supplémentaire : toutes les
-> données (biens, baux actifs → occupé/vacant, échéances → attendu/perçu/retard)
-> sont déjà exposées par `property`/`lease`/`payment` via la Gateway. C'est une
-> question d'agrégation et d'affichage côté frontend (même principe que la
-> quittance PDF de `payment` — voir décision « Aucune agrégation cross-service »
-> dans CLAUDE.md), pas un module backend à développer. Voir « État d'avancement »
-> : le backend du MVP est complet, le frontend est un chantier séparé, pas
-> encore démarré.
+> Le tableau de bord n'a nécessité aucun backend supplémentaire : ses données
+> (biens, baux actifs → occupé/vacant, échéances → attendu/perçu/retard) sont
+> exposées par `property`/`lease`/`payment` via la Gateway et agrégées côté
+> frontend (même principe que la quittance PDF de `payment` — voir décision
+> « Aucune agrégation cross-service » dans CLAUDE.md). Fait, voir
+> `src/pages/DashboardPage.tsx`.
 
 ### Hors MVP (v2+)
 
@@ -149,28 +147,17 @@ birdhab/
 
 - [x] Nom du projet validé : **Birdhab**
 - [x] Licence BUSL-1.1 configurée
-- [x] Structure du repo créée (7 microservices)
+- [x] Structure du repo créée (7 microservices + frontend)
 - [x] CI/CD GitHub Actions configuré
 - [x] .gitignore configuré
 - [x] Docker Compose fonctionnel (PostgreSQL + MinIO)
-- [x] Service `auth` codé et testé (register/login/refresh/logout/me, JWT, Spring Security)
-- [x] Service `property` codé et testé (CRUD des biens)
-- [x] Service `tenant` codé et testé (CRUD des locataires)
-- [x] Service `lease` codé et testé (CRUD des baux, statut dérivé de la date de fin)
-- [x] Service `payment` codé et testé (suivi des paiements, quittance PDF via Apache PDFBox)
-- [x] Service `document` codé et testé (upload/téléchargement des documents d'identité, stockage MinIO)
-- [x] Gateway codée et testée (Spring Cloud Gateway, routage HTTP pur, pas de centralisation JWT)
-- [x] **Backend du MVP fonctionnellement complet** (les 6 microservices + Gateway ci-dessus
-      couvrent l'intégralité des données nécessaires au tableau de bord — voir note
-      dans « Périmètre fonctionnel »)
-- [x] Adresse postale ajoutée au profil `auth` (`PUT /auth/me`, migration V3) — trou détecté
-      en construisant le flux de quittance PDF côté frontend, comblé avant de continuer
-- [x] Frontend démarré (`frontend/` — React 18 + Vite + TypeScript + Tailwind v3) :
-      authentification complète, page Mon profil, modules Biens, Locataires, Baux,
-      Paiements (avec génération réelle de quittance PDF) et Documents (upload/
-      téléchargement réels) en CRUD complet, tous vérifiés de bout en bout dans le navigateur
-- [ ] Frontend : tableau de bord (dernier module du MVP)
-- [ ] Périmètre MVP finalisé
+- [x] **MVP complet, backend et frontend** : les 6 microservices (`auth`, `property`, `tenant`,
+      `lease`, `payment`, `document`) + `gateway` sont codés et testés ; le frontend
+      (`frontend/`) couvre l'authentification, le profil propriétaire, et les 5 modules CRUD
+      + le tableau de bord, tous vérifiés de bout en bout dans un vrai navigateur. Détail
+      service par service dans `git log` et le tableau « Décisions actées » ci-dessous —
+      cette liste ne duplique plus l'historique complet, qui devenait obsolète trop vite.
+- [ ] Périmètre MVP finalisé (revue finale du scope avant de passer à autre chose)
 
 ---
 
@@ -204,6 +191,7 @@ birdhab/
 | Jetons JWT côté frontend | **Stockés en `localStorage`, pas de cookie httpOnly** | Compromis pragmatique pour une SPA sans BFF : un cookie httpOnly nécessiterait un backend dédié à la gestion de session, hors scope actuel. Accepté en connaissance du risque XSS ; à revoir si un BFF est introduit un jour. |
 | Types TypeScript frontend | **Générés depuis les contrats OpenAPI existants (`openapi-typescript`), jamais écrits à la main** | Réutilise le travail déjà fait sur `docs/api/*.yml` plutôt que de dupliquer la définition des DTOs côté frontend ; a aussi révélé que plusieurs schémas `*Response` ne déclaraient aucun champ `required` alors que le backend les renvoie toujours (corrigé, voir commit `feat: démarrer le frontend`). |
 | Adresse du propriétaire (`auth`) | **Ajoutée a posteriori via `PUT /auth/me`, pas à l'inscription** | La quittance PDF (`payment`) a besoin de l'adresse du bailleur, absente du modèle `User` jusqu'ici — trou détecté en construisant le module Paiements du frontend. Plutôt que de l'exiger à l'inscription (alourdit ce flux pour une donnée seulement utile au moment de générer une quittance), elle se renseigne via une page « Mon profil » dédiée, colonnes nullable en base. |
+| Tableau de bord (frontend) | **Stat tiles + meter de progression, pas de graphique à deux axes** | Suit le skill `dataviz` du projet : « attendu vs perçu » sur deux mesures de même nature se prête à un meter (barre de progression), pas à un graphique à deux échelles. Couleur de statut réservée (rouge uniquement pour l'alerte de retard, jamais réutilisée comme couleur de série). |
 
 ## Questions en suspens
 
