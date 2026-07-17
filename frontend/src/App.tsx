@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { PropertiesPage } from './pages/PropertiesPage'
 import { TenantsPage } from './pages/TenantsPage'
+import { LeasesPage } from './pages/LeasesPage'
 import { ComingSoonPage } from './pages/ComingSoonPage'
 
 function App() {
@@ -21,7 +22,7 @@ function App() {
                 <Route path="/" element={<ComingSoonPage title="Tableau de bord" />} />
                 <Route path="/properties" element={<PropertiesPage />} />
                 <Route path="/tenants" element={<TenantsPage />} />
-                <Route path="/leases" element={<ComingSoonPage title="Baux" />} />
+                <Route path="/leases" element={<LeasesPage />} />
                 <Route path="/payments" element={<ComingSoonPage title="Paiements" />} />
                 <Route path="/documents" element={<ComingSoonPage title="Documents" />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
