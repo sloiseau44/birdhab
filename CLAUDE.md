@@ -117,20 +117,26 @@ propre à `auth`, qui implémente directement `JwtValidator`.
 voir décisions ci-dessus et `frontend/README.md`). En place : authentification
 complète (login/register/logout, JWT en localStorage, rafraîchissement
 automatique sur 401, garde de route), layout avec navigation, et les modules
-**Biens** (`src/pages/PropertiesPage.tsx`, gabarit initial) et **Locataires**
+**Biens** (`src/pages/PropertiesPage.tsx`, gabarit initial), **Locataires**
 (`src/pages/TenantsPage.tsx`, avec champs facultatifs téléphone/adresse — voir
 comment `TenantsPage` omet l'adresse de la requête si tous ses sous-champs
-sont vides) en CRUD complet. Vérifié de bout en bout dans un vrai navigateur
-à chaque fois (pas seulement au build) : inscription → connexion auto → CRUD
-réel via Gateway → service → Postgres → déconnexion → garde de route.
+sont vides) et **Baux** (`src/pages/LeasesPage.tsx`, avec `propertyId`/`tenantId`
+présentés en listes déroulantes à libellé lisible — adresse du bien, nom du
+locataire — plutôt qu'en champs UUID bruts, résolues via des `Map` construites
+depuis `useQuery` sur `properties`/`tenants` ; bouton de création désactivé
+tant qu'aucun bien/locataire n'existe) en CRUD complet. Vérifié de bout en
+bout dans un vrai navigateur à chaque fois (pas seulement au build) :
+inscription → connexion auto → CRUD réel via Gateway → service → Postgres →
+déconnexion → garde de route.
 
 Prochaine étape suggérée : construire les modules restants sur le même
-gabarit — **Baux**, **Paiements** (avec le flux de
+gabarit — **Paiements** (avec le flux de
 génération de quittance PDF : le frontend doit agréger nom/adresse du
 bailleur via `/auth/me`, nom du locataire via `tenant`, adresse du bien via
 `property`, puis appeler `POST /payments/{id}/receipt`, voir décision
-« Aucune agrégation cross-service » ci-dessus), **Documents** (upload
-multipart), et le **tableau de bord** (agrégation property/lease/payment
+« Aucune agrégation cross-service » ci-dessus — même pattern de résolution de
+libellés que `LeasesPage` pour afficher le bail concerné), **Documents**
+(upload multipart), et le **tableau de bord** (agrégation property/lease/payment
 côté client, voir CONTEXT.md). Chaque module suit le même schéma que
 `PropertiesPage.tsx` : fichier `src/api/<module>.ts` typé depuis
 `src/types/api/<service>.ts`, page avec `useQuery`/`useMutation`

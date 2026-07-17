@@ -164,10 +164,9 @@ birdhab/
       couvrent l'intégralité des données nécessaires au tableau de bord — voir note
       dans « Périmètre fonctionnel »)
 - [x] Frontend démarré (`frontend/` — React 18 + Vite + TypeScript + Tailwind v3) :
-      authentification complète, modules Biens et Locataires en CRUD complet,
+      authentification complète, modules Biens, Locataires et Baux en CRUD complet,
       vérifiés de bout en bout dans le navigateur
-- [ ] Frontend : modules restants (baux, paiements + quittance PDF,
-      documents, tableau de bord)
+- [ ] Frontend : modules restants (paiements + quittance PDF, documents, tableau de bord)
 - [ ] Périmètre MVP finalisé
 
 ---
