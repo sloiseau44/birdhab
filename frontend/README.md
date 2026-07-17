@@ -24,6 +24,21 @@ nécessaire côté backend en dev.
 | `npm run build` | Vérification des types (`tsc -b`) puis build de production |
 | `npm run lint` | ESLint |
 | `npm run preview` | Sert le build de production en local |
+| `npm test` | Tests (Vitest, une seule passe) |
+| `npm run test:watch` | Tests en mode watch |
+
+## Tests
+
+Vitest + React Testing Library + MSW (mock des appels HTTP au niveau réseau,
+pas de mock d'Axios). Convention : `*.test.ts(x)` à côté du fichier testé.
+Config dans `vite.config.ts` (bloc `test`), setup global (matchers
+`@testing-library/jest-dom`, cycle de vie du serveur MSW) dans
+`src/test/setup.ts`. Portée actuelle : logique critique uniquement
+(intercepteur JWT/refresh de `src/api/client.ts`, `AuthContext`/`RequireAuth`,
+et `PropertiesPage` comme gabarit d'un module CRUD complet) — pas (encore)
+une couverture exhaustive de toutes les pages. Exécutés en CI (`.github/workflows/ci.yml`,
+job « Frontend »), en plus de la vérification manuelle dans un vrai navigateur
+qui reste la référence pour valider un nouveau module de bout en bout.
 
 ## Types API générés depuis OpenAPI
 
