@@ -1,6 +1,6 @@
 # Birdhab — Frontend
 
-Interface web du backend Birdhab (React 18 + Vite + TypeScript + Tailwind CSS v3).
+Interface web du backend Birdhab (React 18 + Vite 8 + TypeScript + Tailwind CSS v4).
 
 ## Démarrer en local
 
@@ -56,7 +56,5 @@ Rafraîchissement automatique de l'access token sur une réponse 401 (intercepte
 
 ## Node.js
 
-Ce projet nécessite Node **≥ 20** pour bénéficier de tout l'outillage moderne (certaines
-dépendances imposent déjà `>= 20` dans leurs `engines`, ex. `react-router@7` — actuellement
-figé sur `react-router-dom@6` pour rester compatible avec un poste en Node 18.16). Une
-montée de version de Node est recommandée pour éviter ces contournements.
+Ce projet nécessite Node **≥ 20** (Tailwind v4 et son moteur natif `@tailwindcss/oxide`
+en particulier). Node 24 LTS utilisé en développement.

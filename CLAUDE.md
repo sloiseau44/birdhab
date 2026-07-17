@@ -14,7 +14,7 @@
 - GitHub Actions (CI sur `main` et `develop`)
 - OpenAPI / Swagger pour la doc API
 - Spring Cloud Gateway (pile réactive WebFlux) pour le point d'entrée unique (`gateway`)
-- React 18 + Vite + TypeScript + Tailwind CSS v3 pour le frontend (`frontend/`)
+- React 18 + Vite 8 + TypeScript + Tailwind CSS v4 pour le frontend (`frontend/`)
 
 ## Décisions techniques actées (ne pas remettre en question sans validation explicite)
 
@@ -27,7 +27,7 @@
 - **`gateway` : routage HTTP pur, pas de centralisation JWT.** La Gateway route par préfixe de chemin vers chaque service sans jamais valider ni transmettre l'identité elle-même ; centraliser reviendrait à faire confiance à un en-tête interne (ex. `X-User-Id`) alors que les services restent également joignables directement (pas d'isolation réseau prévue pour un produit open-core self-hosted) — un attaquant pourrait alors forger cet en-tête en s'adressant directement au service. Ne pas revenir sur cette décision sans fermer l'accès direct aux services.
 - **Aucune agrégation cross-service côté serveur** : un service qui a besoin de données détenues par un autre (ex. la quittance PDF de `payment`, qui a besoin du nom/adresse du bailleur et du locataire) ne les récupère jamais lui-même par appel réseau ; c'est l'appelant (frontend/BFF) qui les agrège et les transmet dans le corps de la requête. Voir `docs/api/payment.yml` (`ReceiptRequest`) pour l'exemple appliqué.
 - **Adresse postale sur `User` (`auth`) : ajoutée a posteriori, pas à l'inscription.** `RegisterRequest` ne demande toujours que email/mot de passe/prénom/nom ; l'adresse (nécessaire pour la quittance PDF) se renseigne via `PUT /auth/me`, colonnes nullable en base. Ne pas rendre l'adresse obligatoire à l'inscription : ça alourdirait ce flux pour une donnée qui n'est utile qu'au moment de générer une quittance.
-- **Frontend : Tailwind CSS v3 (pas v4), react-router-dom v6 (pas v7).** Ces versions plus récentes exigent Node ≥ 20 (le moteur natif `@tailwindcss/oxide` de Tailwind v4 en particulier), incompatible avec le poste de développement actuel (Node 18.16). Remonter à ces versions dès que Node est mis à jour — voir `frontend/README.md`.
+- **Node du poste de dev : 24 LTS** (mis à jour depuis 18.16 via `winget install OpenJS.NodeJS.LTS`, action confirmée explicitement car changement système). Débloque Tailwind CSS v4 et react-router-dom v7 (utilisés depuis), et Vite 8 (corrige une vulnérabilité esbuild du serveur de dev signalée par `npm audit` depuis le début du frontend). Plus de contrainte de version basse à surveiller pour les futures dépendances frontend.
 
 ## Architecture
 
@@ -92,8 +92,6 @@ vite pour rester à jour ici.
   (voir décision « Aucune agrégation cross-service »).
 
 **Chantiers restants, aucun n'est urgent — à discuter avant de commencer :**
-- Node du poste de dev est en 18.16 ; le mettre à jour débloquerait Tailwind
-  v4 et react-router-dom v7 (voir décision « Frontend : Tailwind v3... » ci-dessus).
 - Portail locataire, encadrement des loyers, intégrations comptables et
   autres fonctionnalités v2+/Enterprise listées dans CONTEXT.md — hors
   scope tant que non demandées explicitement.
