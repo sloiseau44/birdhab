@@ -56,6 +56,7 @@ export function TenantsPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [formError, setFormError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['tenants'] })
 
@@ -80,7 +81,11 @@ export function TenantsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => tenantsApi.deleteTenant(id),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setDeleteError(null)
+      invalidate()
+    },
+    onError: (err) => setDeleteError(extractErrorMessage(err, 'Échec de la suppression')),
   })
 
   function openCreateForm() {
@@ -195,6 +200,7 @@ export function TenantsPage() {
       )}
 
       <Card className="mt-6 overflow-hidden">
+        {deleteError && <div className="p-6 pb-0"><ErrorBanner message={deleteError} /></div>}
         {isLoading && <p className="p-6 text-sm text-slate-500">Chargement…</p>}
         {error && <div className="p-6"><ErrorBanner message={extractErrorMessage(error)} /></div>}
         {tenants && tenants.length === 0 && (

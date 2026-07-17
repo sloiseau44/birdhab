@@ -168,4 +168,25 @@ describe('PaymentsPage', () => {
       ),
     )
   })
+
+  it("affiche le message serveur si la suppression échoue et garde l'échéance dans la liste", async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('/api/auth/me', () => HttpResponse.json(OWNER_WITH_ADDRESS)),
+      ...commonHandlers([PAID_PAYMENT]),
+      http.delete('/api/payments/pay1', () =>
+        HttpResponse.json({ message: 'Échéance déjà rapprochée' }, { status: 409 }),
+      ),
+    )
+
+    renderWithAuth(<PaymentsPage />)
+    await waitFor(() => expect(screen.getByText(/12 rue des Lilas/)).toBeInTheDocument())
+
+    await user.click(screen.getByText('Supprimer'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('Échéance déjà rapprochée'),
+    )
+    expect(screen.getByText(/12 rue des Lilas/)).toBeInTheDocument()
+  })
 })

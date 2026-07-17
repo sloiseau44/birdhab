@@ -135,4 +135,25 @@ describe('PropertiesPage', () => {
       expect(screen.getByText("Aucun bien enregistré pour l'instant.")).toBeInTheDocument(),
     )
   })
+
+  it('affiche le message serveur si la suppression échoue et garde le bien dans la liste', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('/api/properties', () => HttpResponse.json([PROPERTY])),
+      http.delete('/api/properties/p1', () =>
+        HttpResponse.json({ message: 'Bien encore lié à un bail actif' }, { status: 409 }),
+      ),
+    )
+
+    renderWithQueryClient(<PropertiesPage />)
+    await waitFor(() => expect(screen.getByText(/12 rue des Lilas/)).toBeInTheDocument())
+
+    const row = screen.getByText(/12 rue des Lilas/).closest('tr')!
+    await user.click(within(row).getByText('Supprimer'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('Bien encore lié à un bail actif'),
+    )
+    expect(screen.getByText(/12 rue des Lilas/)).toBeInTheDocument()
+  })
 })

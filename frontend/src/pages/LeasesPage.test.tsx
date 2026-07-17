@@ -125,4 +125,25 @@ describe('LeasesPage', () => {
       expect(screen.getByText("Aucun bail enregistré pour l'instant.")).toBeInTheDocument(),
     )
   })
+
+  it('affiche le message serveur si la suppression échoue et garde le bail dans la liste', async () => {
+    const user = userEvent.setup()
+    server.use(
+      ...baseHandlers([LEASE]),
+      http.delete('/api/leases/l1', () =>
+        HttpResponse.json({ message: 'Bail encore lié à des paiements' }, { status: 409 }),
+      ),
+    )
+
+    renderWithQueryClient(<LeasesPage />)
+    await waitFor(() => expect(screen.getByText(/12 rue des Lilas, Paris/)).toBeInTheDocument())
+
+    const row = screen.getByText(/12 rue des Lilas, Paris/).closest('tr')!
+    await user.click(within(row).getByText('Supprimer'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('Bail encore lié à des paiements'),
+    )
+    expect(screen.getByText(/12 rue des Lilas, Paris/)).toBeInTheDocument()
+  })
 })

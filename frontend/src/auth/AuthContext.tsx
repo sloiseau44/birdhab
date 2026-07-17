@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import * as authApi from '../api/auth'
-import { tokenStorage } from '../api/client'
+import { SESSION_EXPIRED_EVENT, tokenStorage } from '../api/client'
 import type { UserProfile } from '../api/auth'
 
 interface AuthContextValue {
@@ -40,6 +40,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadCurrentUser()
   }, [loadCurrentUser])
+
+  useEffect(() => {
+    // Le refresh token a fini par expirer/être révoqué en cours de session (pas au montage) :
+    // l'intercepteur de client.ts a déjà nettoyé les jetons, on aligne juste l'état React pour
+    // que RequireAuth redirige vers /login au lieu de laisser la page courante en erreur muette.
+    function handleSessionExpired() {
+      setUser(null)
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+  }, [])
 
   const login = useCallback(async (email: string, password: string) => {
     await authApi.login({ email, password })

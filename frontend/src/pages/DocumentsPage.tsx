@@ -6,7 +6,7 @@ import type { Document } from '../api/documents'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { extractErrorMessage } from '../lib/errors'
+import { extractBlobErrorMessage, extractErrorMessage } from '../lib/errors'
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`
@@ -26,6 +26,8 @@ export function DocumentsPage() {
 
   const [selectedTenantId, setSelectedTenantId] = useState('')
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -44,7 +46,11 @@ export function DocumentsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => documentsApi.deleteDocument(id),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setDeleteError(null)
+      invalidate()
+    },
+    onError: (err) => setDeleteError(extractErrorMessage(err, 'Échec de la suppression')),
   })
 
   function handleUpload(event: React.FormEvent) {
@@ -60,6 +66,7 @@ export function DocumentsPage() {
 
   async function handleDownload(document: Document) {
     if (!document.id) return
+    setDownloadError(null)
     setDownloadingId(document.id)
     try {
       const blob = await documentsApi.downloadDocument(document.id)
@@ -69,6 +76,8 @@ export function DocumentsPage() {
       link.download = document.fileName
       link.click()
       URL.revokeObjectURL(url)
+    } catch (err) {
+      setDownloadError(await extractBlobErrorMessage(err, 'Échec du téléchargement'))
     } finally {
       setDownloadingId(null)
     }
@@ -135,6 +144,8 @@ export function DocumentsPage() {
       </Card>
 
       <Card className="mt-6 overflow-hidden">
+        {deleteError && <div className="p-6 pb-0"><ErrorBanner message={deleteError} /></div>}
+        {downloadError && <div className="p-6 pb-0"><ErrorBanner message={downloadError} /></div>}
         {isLoading && <p className="p-6 text-sm text-slate-500">Chargement…</p>}
         {error && <div className="p-6"><ErrorBanner message={extractErrorMessage(error)} /></div>}
         {documents && documents.length === 0 && (

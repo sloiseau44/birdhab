@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../test/server'
-import { apiClient, tokenStorage } from './client'
+import { apiClient, SESSION_EXPIRED_EVENT, tokenStorage } from './client'
 
 describe('apiClient', () => {
   beforeEach(() => {
@@ -87,8 +87,10 @@ describe('apiClient', () => {
     expect(refreshCallCount).toBe(1)
   })
 
-  it('efface les jetons et propage l\'erreur si le rafraîchissement échoue', async () => {
+  it('efface les jetons, émet SESSION_EXPIRED_EVENT et propage l\'erreur si le rafraîchissement échoue', async () => {
     tokenStorage.setTokens({ accessToken: 'expired', refreshToken: 'invalid', expiresIn: 3600 })
+    const sessionExpiredListener = vi.fn()
+    window.addEventListener(SESSION_EXPIRED_EVENT, sessionExpiredListener)
     server.use(
       http.get('/api/ping', () => new HttpResponse(null, { status: 401 })),
       http.post('/api/auth/refresh', () => new HttpResponse(null, { status: 401 })),
@@ -98,6 +100,8 @@ describe('apiClient', () => {
 
     expect(tokenStorage.getAccessToken()).toBeNull()
     expect(tokenStorage.getRefreshToken()).toBeNull()
+    expect(sessionExpiredListener).toHaveBeenCalledTimes(1)
+    window.removeEventListener(SESSION_EXPIRED_EVENT, sessionExpiredListener)
   })
 
   it('ne rejoue jamais une deuxième fois si la requête rejouée échoue aussi en 401', async () => {

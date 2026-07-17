@@ -161,4 +161,44 @@ describe('DocumentsPage', () => {
       expect(screen.getByText('Aucun document enregistré pour l\'instant.')).toBeInTheDocument(),
     )
   })
+
+  it('affiche le message serveur si la suppression échoue et garde le document dans la liste', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('/api/documents', () => HttpResponse.json([DOCUMENT])),
+      http.get('/api/tenants', () => HttpResponse.json([TENANT])),
+      http.delete('/api/documents/d1', () =>
+        HttpResponse.json({ message: 'Document déjà archivé' }, { status: 409 }),
+      ),
+    )
+
+    renderWithQueryClient(<DocumentsPage />)
+    await waitFor(() => expect(screen.getByText('piece-identite.pdf')).toBeInTheDocument())
+
+    const row = screen.getByText('piece-identite.pdf').closest('tr')!
+    await user.click(within(row).getByText('Supprimer'))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Document déjà archivé'))
+    expect(screen.getByText('piece-identite.pdf')).toBeInTheDocument()
+  })
+
+  it('affiche un message si le téléchargement échoue', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('/api/documents', () => HttpResponse.json([DOCUMENT])),
+      http.get('/api/tenants', () => HttpResponse.json([TENANT])),
+      http.get('/api/documents/d1/content', () =>
+        HttpResponse.json({ message: 'Fichier introuvable dans le stockage' }, { status: 404 }),
+      ),
+    )
+
+    renderWithQueryClient(<DocumentsPage />)
+    await waitFor(() => expect(screen.getByText('piece-identite.pdf')).toBeInTheDocument())
+
+    await user.click(screen.getByText('Télécharger'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('Fichier introuvable dans le stockage'),
+    )
+  })
 })

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { server } from '../test/server'
-import { tokenStorage } from '../api/client'
+import { SESSION_EXPIRED_EVENT, tokenStorage } from '../api/client'
 import { AuthProvider } from './AuthContext'
 import { useAuth } from './useAuth'
 
@@ -97,6 +97,19 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByTestId('authenticated')).toHaveTextContent('true'))
 
     await user.click(screen.getByText('logout'))
+
+    await waitFor(() => expect(screen.getByTestId('authenticated')).toHaveTextContent('false'))
+    expect(screen.getByTestId('user')).toHaveTextContent('none')
+  })
+
+  it("se déconnecte quand l'évènement de session expirée est émis (rafraîchissement du token qui échoue en cours de session)", async () => {
+    tokenStorage.setTokens({ accessToken: 'tok', refreshToken: 'ref', expiresIn: 3600 })
+    server.use(http.get('/api/auth/me', () => HttpResponse.json(PROFILE)))
+
+    renderConsumer()
+    await waitFor(() => expect(screen.getByTestId('authenticated')).toHaveTextContent('true'))
+
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
 
     await waitFor(() => expect(screen.getByTestId('authenticated')).toHaveTextContent('false'))
     expect(screen.getByTestId('user')).toHaveTextContent('none')

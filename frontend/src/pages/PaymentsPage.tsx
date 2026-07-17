@@ -10,7 +10,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { extractErrorMessage } from '../lib/errors'
+import { extractBlobErrorMessage, extractErrorMessage } from '../lib/errors'
 
 const STATUS_LABELS: Record<PaymentStatus, string> = {
   PENDING: 'En attente',
@@ -84,6 +84,7 @@ export function PaymentsPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [formError, setFormError] = useState<string | null>(null)
   const [receiptError, setReceiptError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [generatingReceiptId, setGeneratingReceiptId] = useState<string | null>(null)
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['payments'] })
@@ -109,7 +110,11 @@ export function PaymentsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => paymentsApi.deletePayment(id),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setDeleteError(null)
+      invalidate()
+    },
+    onError: (err) => setDeleteError(extractErrorMessage(err, 'Échec de la suppression')),
   })
 
   function openCreateForm() {
@@ -173,7 +178,7 @@ export function PaymentsPage() {
       link.click()
       URL.revokeObjectURL(url)
     } catch (err) {
-      setReceiptError(extractErrorMessage(err, 'Échec de la génération de la quittance'))
+      setReceiptError(await extractBlobErrorMessage(err, 'Échec de la génération de la quittance'))
     } finally {
       setGeneratingReceiptId(null)
     }
@@ -290,6 +295,7 @@ export function PaymentsPage() {
       )}
 
       <Card className="mt-6 overflow-hidden">
+        {deleteError && <div className="p-6 pb-0"><ErrorBanner message={deleteError} /></div>}
         {isLoading && <p className="p-6 text-sm text-slate-500">Chargement…</p>}
         {error && <div className="p-6"><ErrorBanner message={extractErrorMessage(error)} /></div>}
         {payments && payments.length === 0 && (

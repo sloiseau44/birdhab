@@ -116,4 +116,25 @@ describe('TenantsPage', () => {
       expect(screen.getByText("Aucun locataire enregistré pour l'instant.")).toBeInTheDocument(),
     )
   })
+
+  it('affiche le message serveur si la suppression échoue et garde le locataire dans la liste', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('/api/tenants', () => HttpResponse.json([TENANT])),
+      http.delete('/api/tenants/t1', () =>
+        HttpResponse.json({ message: 'Locataire encore lié à un bail actif' }, { status: 409 }),
+      ),
+    )
+
+    renderWithQueryClient(<TenantsPage />)
+    await waitFor(() => expect(screen.getByText('Jean Dupont')).toBeInTheDocument())
+
+    const row = screen.getByText('Jean Dupont').closest('tr')!
+    await user.click(within(row).getByText('Supprimer'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('Locataire encore lié à un bail actif'),
+    )
+    expect(screen.getByText('Jean Dupont')).toBeInTheDocument()
+  })
 })

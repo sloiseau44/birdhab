@@ -6,6 +6,9 @@ type AuthResponse = AuthComponents['schemas']['AuthResponse']
 const ACCESS_TOKEN_KEY = 'birdhab.accessToken'
 const REFRESH_TOKEN_KEY = 'birdhab.refreshToken'
 
+/** Émis quand le rafraîchissement du token échoue (session vraiment expirée) — voir AuthContext, qui déconnecte l'utilisateur en écoutant cet évènement. */
+export const SESSION_EXPIRED_EVENT = 'birdhab:session-expired'
+
 /**
  * Stockage des jetons en localStorage : compromis pragmatique pour une SPA
  * sans BFF (pas de cookie httpOnly possible sans backend dédié à ça). Accepté
@@ -75,6 +78,7 @@ apiClient.interceptors.response.use(
       return apiClient(originalConfig)
     } catch (refreshError) {
       tokenStorage.clear()
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
       throw refreshError
     }
   },
