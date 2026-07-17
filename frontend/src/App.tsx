@@ -8,6 +8,7 @@ import { TenantsPage } from './pages/TenantsPage'
 import { LeasesPage } from './pages/LeasesPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { PaymentsPage } from './pages/PaymentsPage'
+import { DocumentsPage } from './pages/DocumentsPage'
 import { ComingSoonPage } from './pages/ComingSoonPage'
 
 function App() {
@@ -27,7 +28,7 @@ function App() {
                 <Route path="/leases" element={<LeasesPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
-                <Route path="/documents" element={<ComingSoonPage title="Documents" />} />
+                <Route path="/documents" element={<DocumentsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </AppLayout>
