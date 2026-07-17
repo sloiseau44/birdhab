@@ -46,6 +46,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </nav>
         <div className="border-t border-slate-200 p-4">
           <p className="truncate text-sm text-slate-500">{user?.email}</p>
+          <NavLink
+            to="/profile"
+            className="mt-2 block text-sm font-medium text-slate-500 hover:text-slate-900"
+          >
+            Mon profil
+          </NavLink>
           <button
             onClick={handleLogout}
             className="mt-2 text-sm font-medium text-slate-500 hover:text-slate-900"

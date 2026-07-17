@@ -3,6 +3,7 @@ import type { components } from '../types/api/auth'
 
 export type AuthResponse = components['schemas']['AuthResponse']
 export type UserProfile = components['schemas']['UserProfile']
+export type UpdateProfileRequest = components['schemas']['UpdateProfileRequest']
 type RegisterRequest = components['schemas']['RegisterRequest']
 type LoginRequest = components['schemas']['LoginRequest']
 
@@ -30,5 +31,10 @@ export async function logout(): Promise<void> {
 
 export async function getCurrentUser(): Promise<UserProfile> {
   const { data } = await apiClient.get<UserProfile>('/auth/me')
+  return data
+}
+
+export async function updateProfile(request: UpdateProfileRequest): Promise<UserProfile> {
+  const { data } = await apiClient.put<UserProfile>('/auth/me', request)
   return data
 }

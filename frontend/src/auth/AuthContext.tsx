@@ -10,6 +10,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>
   logout: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -59,8 +60,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, isAuthenticated: user !== null, login, register, logout }),
-    [user, isLoading, login, register, logout],
+    () => ({
+      user,
+      isLoading,
+      isAuthenticated: user !== null,
+      login,
+      register,
+      logout,
+      refreshUser: loadCurrentUser,
+    }),
+    [user, isLoading, login, register, logout, loadCurrentUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

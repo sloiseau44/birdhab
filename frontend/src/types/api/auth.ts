@@ -90,7 +90,11 @@ export interface paths {
         };
         /** Récupérer le profil du compte connecté */
         get: operations["getCurrentUser"];
-        put?: never;
+        /**
+         * Modifier le profil du compte connecté
+         * @description Met à jour le nom et/ou l'adresse postale du propriétaire authentifié. L'adresse est notamment utilisée comme adresse du bailleur lors de la génération d'une quittance PDF par le service `payment` (voir `docs/api/payment.yml`, `ReceiptRequest`).
+         */
+        put: operations["updateCurrentUser"];
         post?: never;
         delete?: never;
         options?: never;
@@ -139,6 +143,14 @@ export interface components {
              */
             expiresIn: number;
         };
+        Address: {
+            /** @example 1 rue de la Paix */
+            street: string;
+            /** @example 75001 */
+            postalCode: string;
+            /** @example Paris */
+            city: string;
+        };
         UserProfile: {
             /** Format: uuid */
             id: string;
@@ -146,7 +158,16 @@ export interface components {
             email: string;
             firstName?: string | null;
             lastName?: string | null;
+            /** @description Adresse postale du propriétaire, absente tant qu'elle n'a pas été renseignée via PUT /auth/me. Nécessaire pour générer une quittance (voir docs/api/payment.yml). */
+            address?: components["schemas"]["Address"] | null;
             roles: ("OWNER" | "ADMIN" | "TENANT")[];
+        };
+        UpdateProfileRequest: {
+            /** @example Stéphane */
+            firstName?: string;
+            /** @example Loiseau */
+            lastName?: string;
+            address?: components["schemas"]["Address"];
         };
         ErrorResponse: {
             /** Format: date-time */
@@ -333,6 +354,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+            /** @description Non authentifié */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Profil mis à jour */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+            /** @description Requête invalide */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Non authentifié */
