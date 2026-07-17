@@ -1,10 +1,13 @@
 package com.birdhab.auth.api;
 
+import com.birdhab.auth.api.dto.AddressDto;
 import com.birdhab.auth.api.dto.AuthResponse;
 import com.birdhab.auth.api.dto.LoginRequest;
 import com.birdhab.auth.api.dto.RefreshRequest;
 import com.birdhab.auth.api.dto.RegisterRequest;
+import com.birdhab.auth.api.dto.UpdateProfileRequest;
 import com.birdhab.auth.api.dto.UserProfile;
+import com.birdhab.auth.domain.entity.Address;
 import com.birdhab.auth.domain.entity.Role;
 import com.birdhab.auth.domain.entity.User;
 import com.birdhab.auth.domain.service.AuthService;
@@ -14,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -67,6 +71,15 @@ public class AuthController {
         return toUserProfile(user);
     }
 
+    @PutMapping("/me")
+    public UserProfile updateMe(@Valid @RequestBody UpdateProfileRequest request, Authentication authentication) {
+        Address address = request.address() == null ? null
+                : new Address(request.address().street(), request.address().postalCode(), request.address().city());
+        User user = authService.updateProfile(currentUserId(authentication), request.firstName(),
+                request.lastName(), address);
+        return toUserProfile(user);
+    }
+
     private UUID currentUserId(Authentication authentication) {
         return UUID.fromString(authentication.getName());
     }
@@ -77,6 +90,9 @@ public class AuthController {
 
     private UserProfile toUserProfile(User user) {
         List<String> roles = user.getRoles().stream().map(Role::getName).map(Enum::name).toList();
-        return new UserProfile(user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), roles);
+        AddressDto address = user.getAddress() == null ? null
+                : new AddressDto(user.getAddress().getStreet(), user.getAddress().getPostalCode(),
+                        user.getAddress().getCity());
+        return new UserProfile(user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), address, roles);
     }
 }

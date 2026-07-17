@@ -1,5 +1,6 @@
 package com.birdhab.auth.domain.service;
 
+import com.birdhab.auth.domain.entity.Address;
 import com.birdhab.auth.domain.entity.RefreshToken;
 import com.birdhab.auth.domain.entity.Role;
 import com.birdhab.auth.domain.entity.RoleName;
@@ -174,6 +175,20 @@ public class AuthService {
     public User getCurrentUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(UserNotFoundException::new);
+    }
+
+    /**
+     * Remplace intégralement le prénom/nom/adresse de l'utilisateur
+     * authentifié (pas de correctif partiel champ par champ).
+     *
+     * @throws UserNotFoundException si l'utilisateur n'existe plus
+     */
+    public User updateProfile(UUID userId, String firstName, String lastName, Address address) {
+        User user = getCurrentUser(userId);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setAddress(address);
+        return userRepository.save(user);
     }
 
     private Claims parseRefreshTokenClaims(String refreshTokenValue) {

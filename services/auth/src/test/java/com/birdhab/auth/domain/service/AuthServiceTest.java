@@ -1,5 +1,6 @@
 package com.birdhab.auth.domain.service;
 
+import com.birdhab.auth.domain.entity.Address;
 import com.birdhab.auth.domain.entity.RefreshToken;
 import com.birdhab.auth.domain.entity.Role;
 import com.birdhab.auth.domain.entity.RoleName;
@@ -342,6 +343,35 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.getCurrentUser(userId))
                 .isInstanceOf(UserNotFoundException.class);
+    }
+
+    // --- updateProfile ---
+
+    @Test
+    void updateProfile_nominal_replacesNameAndAddressAndSaves() {
+        UUID userId = UUID.randomUUID();
+        User user = userWithId(userId, true);
+        Address address = new Address("1 rue de la Paix", "75001", "Paris");
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+
+        User result = authService.updateProfile(userId, "Stéphane", "Loiseau", address);
+
+        assertThat(result.getFirstName()).isEqualTo("Stéphane");
+        assertThat(result.getLastName()).isEqualTo("Loiseau");
+        assertThat(result.getAddress()).isEqualTo(address);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateProfile_notFound_throwsUserNotFoundAndDoesNotSave() {
+        UUID userId = UUID.randomUUID();
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.updateProfile(userId, "Stéphane", "Loiseau", null))
+                .isInstanceOf(UserNotFoundException.class);
+
+        verify(userRepository, never()).save(any());
     }
 
     private User argThatUserHasRole(RoleName roleName) {

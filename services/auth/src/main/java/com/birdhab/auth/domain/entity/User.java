@@ -2,6 +2,7 @@ package com.birdhab.auth.domain.entity;
 
 import com.birdhab.common.entity.BaseEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -35,6 +36,9 @@ public class User extends BaseEntity {
 
     @Column(name = "last_name", length = 100)
     private String lastName;
+
+    @Embedded
+    private Address address;
 
     @Column(name = "enabled", nullable = false)
     private boolean enabled = true;
@@ -86,6 +90,14 @@ public class User extends BaseEntity {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
     }
 
     public boolean isEnabled() {

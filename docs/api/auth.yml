@@ -159,6 +159,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+    put:
+      tags: [Auth]
+      summary: Modifier le profil du compte connecté
+      description: >
+        Met à jour le nom et/ou l'adresse postale du propriétaire authentifié.
+        L'adresse est notamment utilisée comme adresse du bailleur lors de la
+        génération d'une quittance PDF par le service `payment` (voir
+        `docs/api/payment.yml`, `ReceiptRequest`).
+      operationId: updateCurrentUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profil mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -221,6 +258,21 @@ components:
           description: Durée de validité de l'accessToken, en secondes
           example: 900
 
+    Address:
+      type: object
+      required: [street, postalCode, city]
+      properties:
+        street:
+          type: string
+          example: 1 rue de la Paix
+        postalCode:
+          type: string
+          pattern: '^[0-9]{5}$'
+          example: '75001'
+        city:
+          type: string
+          example: Paris
+
     UserProfile:
       type: object
       required: [id, email, roles]
@@ -237,11 +289,31 @@ components:
         lastName:
           type: string
           nullable: true
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          nullable: true
+          description: >
+            Adresse postale du propriétaire, absente tant qu'elle n'a pas été
+            renseignée via PUT /auth/me. Nécessaire pour générer une quittance
+            (voir docs/api/payment.yml).
         roles:
           type: array
           items:
             type: string
             enum: [OWNER, ADMIN, TENANT]
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          example: Stéphane
+        lastName:
+          type: string
+          example: Loiseau
+        address:
+          $ref: '#/components/schemas/Address'
 
     ErrorResponse:
       type: object
