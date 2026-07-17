@@ -284,7 +284,7 @@ export function LeasesPage() {
 
       <Card className="mt-6 overflow-hidden">
         {deleteError && <div className="p-6 pb-0"><ErrorBanner message={deleteError} /></div>}
-        {isLoading && <p className="p-6 text-sm text-slate-500">Chargement…</p>}
+        {isLoading && <p className="p-6 text-sm text-slate-500" role="status">Chargement…</p>}
         {error && <div className="p-6"><ErrorBanner message={extractErrorMessage(error)} /></div>}
         {leases && leases.length === 0 && (
           <p className="p-6 text-sm text-slate-500">Aucun bail enregistré pour l'instant.</p>
@@ -293,13 +293,13 @@ export function LeasesPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
               <tr>
-                <th className="px-6 py-3 font-medium">Bien</th>
-                <th className="px-6 py-3 font-medium">Locataire</th>
-                <th className="px-6 py-3 font-medium">Début</th>
-                <th className="px-6 py-3 font-medium">Fin</th>
-                <th className="px-6 py-3 font-medium">Loyer</th>
-                <th className="px-6 py-3 font-medium">Statut</th>
-                <th className="px-6 py-3" />
+                <th scope="col" className="px-6 py-3 font-medium">Bien</th>
+                <th scope="col" className="px-6 py-3 font-medium">Locataire</th>
+                <th scope="col" className="px-6 py-3 font-medium">Début</th>
+                <th scope="col" className="px-6 py-3 font-medium">Fin</th>
+                <th scope="col" className="px-6 py-3 font-medium">Loyer</th>
+                <th scope="col" className="px-6 py-3 font-medium">Statut</th>
+                <th scope="col" className="px-6 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

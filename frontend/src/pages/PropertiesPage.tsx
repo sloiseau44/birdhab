@@ -211,7 +211,7 @@ export function PropertiesPage() {
 
       <Card className="mt-6 overflow-hidden">
         {deleteError && <div className="p-6 pb-0"><ErrorBanner message={deleteError} /></div>}
-        {isLoading && <p className="p-6 text-sm text-slate-500">Chargement…</p>}
+        {isLoading && <p className="p-6 text-sm text-slate-500" role="status">Chargement…</p>}
         {error && <div className="p-6"><ErrorBanner message={extractErrorMessage(error)} /></div>}
         {properties && properties.length === 0 && (
           <p className="p-6 text-sm text-slate-500">Aucun bien enregistré pour l'instant.</p>
@@ -220,11 +220,11 @@ export function PropertiesPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
               <tr>
-                <th className="px-6 py-3 font-medium">Adresse</th>
-                <th className="px-6 py-3 font-medium">Type</th>
-                <th className="px-6 py-3 font-medium">Surface</th>
-                <th className="px-6 py-3 font-medium">Loyer de référence</th>
-                <th className="px-6 py-3" />
+                <th scope="col" className="px-6 py-3 font-medium">Adresse</th>
+                <th scope="col" className="px-6 py-3 font-medium">Type</th>
+                <th scope="col" className="px-6 py-3 font-medium">Surface</th>
+                <th scope="col" className="px-6 py-3 font-medium">Loyer de référence</th>
+                <th scope="col" className="px-6 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

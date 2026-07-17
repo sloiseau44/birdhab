@@ -22,6 +22,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-emerald-700 focus:shadow-md"
+      >
+        Aller au contenu principal
+      </a>
       <aside className="flex w-64 flex-col border-r border-slate-200 bg-white">
         <div className="px-6 py-5">
           <span className="text-xl font-semibold text-slate-900">Birdhab</span>
@@ -60,7 +66,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
       </main>
     </div>

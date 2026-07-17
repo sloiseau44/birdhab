@@ -14,10 +14,17 @@ function formatEuros(amount: number): string {
   )
 }
 
-function Meter({ value, total }: { value: number; total: number }) {
+function Meter({ value, total, label }: { value: number; total: number; label: string }) {
   const percent = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0
   return (
-    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+    <div
+      className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100"
+      role="progressbar"
+      aria-label={label}
+      aria-valuenow={percent}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
       <div className="h-full rounded-full bg-emerald-500" style={{ width: `${percent}%` }} />
     </div>
   )
@@ -40,7 +47,7 @@ function StatTile({
       <p className={`mt-2 text-3xl font-semibold ${tone === 'critical' ? 'text-red-600' : 'text-slate-900'}`}>
         {value}
       </p>
-      {meter && <Meter value={meter.value} total={meter.total} />}
+      {meter && <Meter value={meter.value} total={meter.total} label={label} />}
     </Card>
   )
 }
@@ -102,7 +109,7 @@ export function DashboardPage() {
     <div>
       <h1 className="text-2xl font-semibold text-slate-900">Tableau de bord</h1>
 
-      {isLoading && <p className="mt-4 text-sm text-slate-500">Chargement…</p>}
+      {isLoading && <p className="mt-4 text-sm text-slate-500" role="status">Chargement…</p>}
       {error && <div className="mt-4"><ErrorBanner message={extractErrorMessage(error)} /></div>}
 
       {!isLoading && !error && (
@@ -146,10 +153,10 @@ export function DashboardPage() {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
                   <tr>
-                    <th className="px-6 py-3 font-medium">Bail</th>
-                    <th className="px-6 py-3 font-medium">Échéance</th>
-                    <th className="px-6 py-3 font-medium">Montant</th>
-                    <th className="px-6 py-3 font-medium">Retard</th>
+                    <th scope="col" className="px-6 py-3 font-medium">Bail</th>
+                    <th scope="col" className="px-6 py-3 font-medium">Échéance</th>
+                    <th scope="col" className="px-6 py-3 font-medium">Montant</th>
+                    <th scope="col" className="px-6 py-3 font-medium">Retard</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
