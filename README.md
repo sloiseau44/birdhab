@@ -36,6 +36,8 @@ pas lancer les deux en même temps, ils utilisent les mêmes noms de conteneurs.
 
 ## Déploiement gratuit sur le web (Render)
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/sloiseau44/birdhab)
+
 Pour une instance accessible en permanence (utile si des locataires doivent pouvoir se
 connecter), sans rien installer sur ta machine, `render.yaml` décrit un déploiement
 gratuit sur [Render](https://render.com). Comme le tier gratuit de Render supprime sa
@@ -53,9 +55,10 @@ sur deux autres services gratuits :
    d'un jeton d'API R2.
    > Non testé de bout en bout par manque d'accès à un vrai compte Cloudflare — signale
    > tout souci de compatibilité si tu rencontres une erreur au premier upload.
-3. **Déploiement** : sur Render, « New » → « Blueprint », pointer vers ce repo. Render
-   détecte `render.yaml` et propose de créer les 8 services (6 microservices + Gateway +
-   frontend), chacun sur le plan gratuit.
+3. **Déploiement** : clique le bouton « Deploy to Render » ci-dessus (connexion à Render
+   requise). Il ouvre directement l'assistant de déploiement avec ce repo pré-rempli ;
+   Render détecte `render.yaml` et propose de créer les 8 services (6 microservices +
+   Gateway + frontend), chacun sur le plan gratuit.
 4. Pendant la création, Render demande une valeur pour chaque variable marquée
    `sync: false` dans `render.yaml` :
    - Sur `birdhab-auth`, `birdhab-property`, `birdhab-tenant`, `birdhab-lease`,
