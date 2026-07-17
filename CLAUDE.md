@@ -14,6 +14,7 @@
 - GitHub Actions (CI sur `main` et `develop`)
 - OpenAPI / Swagger pour la doc API
 - Spring Cloud Gateway (pile réactive WebFlux) pour le point d'entrée unique (`gateway`)
+- React 18 + Vite + TypeScript + Tailwind CSS v3 pour le frontend (`frontend/`)
 
 ## Décisions techniques actées (ne pas remettre en question sans validation explicite)
 
@@ -25,11 +26,12 @@
 - **Propagation d'identité inter-services : chaque service valide lui-même le JWT**, secret partagé via `JWT_SECRET` (même valeur par défaut que `auth` en local), sans appel réseau vers `auth`. Décision définitive, y compris maintenant que `gateway` existe (voir ci-dessous). L'implémentation elle-même (`JwtAuthenticationFilter`/`JwtAuthenticationEntryPoint`/`JwtValidatorService`) est partagée dans `shared/common/.../security` depuis la suppression de la duplication entre services — mais l'indépendance de validation par service, elle, reste actée : ne pas centraliser cette vérification dans un composant appelé par les autres au runtime.
 - **`gateway` : routage HTTP pur, pas de centralisation JWT.** La Gateway route par préfixe de chemin vers chaque service sans jamais valider ni transmettre l'identité elle-même ; centraliser reviendrait à faire confiance à un en-tête interne (ex. `X-User-Id`) alors que les services restent également joignables directement (pas d'isolation réseau prévue pour un produit open-core self-hosted) — un attaquant pourrait alors forger cet en-tête en s'adressant directement au service. Ne pas revenir sur cette décision sans fermer l'accès direct aux services.
 - **Aucune agrégation cross-service côté serveur** : un service qui a besoin de données détenues par un autre (ex. la quittance PDF de `payment`, qui a besoin du nom/adresse du bailleur et du locataire) ne les récupère jamais lui-même par appel réseau ; c'est l'appelant (frontend/BFF) qui les agrège et les transmet dans le corps de la requête. Voir `docs/api/payment.yml` (`ReceiptRequest`) pour l'exemple appliqué.
+- **Frontend : Tailwind CSS v3 (pas v4), react-router-dom v6 (pas v7).** Ces versions plus récentes exigent Node ≥ 20 (le moteur natif `@tailwindcss/oxide` de Tailwind v4 en particulier), incompatible avec le poste de développement actuel (Node 18.16). Remonter à ces versions dès que Node est mis à jour — voir `frontend/README.md`.
 
 ## Architecture
 
 Microservices dans `services/` : `auth`, `property`, `tenant`, `lease`, `document`, `payment`, `gateway`.
-Code partagé dans `shared/common/`.
+Code partagé dans `shared/common/`. Frontend dans `frontend/` (React SPA, appelle la Gateway).
 Un service = un contexte borné, pas de dépendance directe entre services (passer par API ou événements).
 
 ## Conventions de code
@@ -111,14 +113,30 @@ sont déclarés explicitement par un petit `JwtConfig` par service (voir
 point 5 ci-dessous) pour ne pas entrer en conflit avec le `JwtService`
 propre à `auth`, qui implémente directement `JwtValidator`.
 
-Prochaine étape suggérée : le **frontend** (aucune stack choisie à ce
-stade — React/Vue/Angular tous à considérer), chantier distinct du backend
-Java/Spring suivi jusqu'ici. Ne pas le démarrer sans validation explicite de
-l'utilisateur (changement de stack technique majeur, voir aussi les
-contraintes de temps disponible dans CONTEXT.md). Si un nouveau microservice
-backend s'avère malgré tout nécessaire un jour (ex. `messaging` pour le
-portail locataire, hors MVP), suivre la même méthode que pour
-`property`/`tenant`/`lease`/`payment`/`document` :
+**Frontend démarré** (`frontend/`, React 18 + Vite + TypeScript + Tailwind v3,
+voir décisions ci-dessus et `frontend/README.md`). En place : authentification
+complète (login/register/logout, JWT en localStorage, rafraîchissement
+automatique sur 401, garde de route), layout avec navigation, et le module
+**Biens** en CRUD complet (`src/pages/PropertiesPage.tsx`) servant de gabarit.
+Vérifié de bout en bout dans un vrai navigateur (pas seulement au build) :
+inscription → connexion auto → CRUD réel via Gateway → property → Postgres →
+déconnexion → garde de route.
+
+Prochaine étape suggérée : construire les modules restants sur le même
+gabarit que Biens — **Locataires**, **Baux**, **Paiements** (avec le flux de
+génération de quittance PDF : le frontend doit agréger nom/adresse du
+bailleur via `/auth/me`, nom du locataire via `tenant`, adresse du bien via
+`property`, puis appeler `POST /payments/{id}/receipt`, voir décision
+« Aucune agrégation cross-service » ci-dessus), **Documents** (upload
+multipart), et le **tableau de bord** (agrégation property/lease/payment
+côté client, voir CONTEXT.md). Chaque module suit le même schéma que
+`PropertiesPage.tsx` : fichier `src/api/<module>.ts` typé depuis
+`src/types/api/<service>.ts`, page avec `useQuery`/`useMutation`
+(TanStack Query), formulaire de création/édition, table de liste.
+
+Si un nouveau microservice backend s'avère nécessaire un jour (ex.
+`messaging` pour le portail locataire, hors MVP), suivre la même méthode que
+pour `property`/`tenant`/`lease`/`payment`/`document` :
 1. Contrat OpenAPI — à proposer et faire valider avant de coder
 2. Squelette Maven du module (ajouté aux `<modules>` du pom racine si nouveau service)
 3. Entité(s) JPA + migration Flyway V1, dans un schéma Postgres dédié
@@ -132,7 +150,7 @@ portail locataire, hors MVP), suivre la même méthode que pour
 
 ## Contrats API
 
-- `docs/api/auth.yaml` : contrat OpenAPI du service `auth` (register, login, refresh, logout, me).
+- `docs/api/auth.yml` : contrat OpenAPI du service `auth` (register, login, refresh, logout, me).
 - `docs/api/property.yml` : contrat OpenAPI du service `property` (CRUD des biens).
 - `docs/api/tenant.yml` : contrat OpenAPI du service `tenant` (CRUD des locataires).
 - `docs/api/lease.yml` : contrat OpenAPI du service `lease` (CRUD des baux).

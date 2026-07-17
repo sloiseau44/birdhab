@@ -163,8 +163,11 @@ birdhab/
 - [x] **Backend du MVP fonctionnellement complet** (les 6 microservices + Gateway ci-dessus
       couvrent l'intégralité des données nécessaires au tableau de bord — voir note
       dans « Périmètre fonctionnel »)
-- [ ] Frontend (chantier séparé, pas encore démarré — stack à choisir ; portera le
-      tableau de bord et l'affichage des autres modules)
+- [x] Frontend démarré (`frontend/` — React 18 + Vite + TypeScript + Tailwind v3) :
+      authentification complète, module Biens en CRUD complet (gabarit pour la suite),
+      vérifié de bout en bout dans le navigateur
+- [ ] Frontend : modules restants (locataires, baux, paiements + quittance PDF,
+      documents, tableau de bord)
 - [ ] Périmètre MVP finalisé
 
 ---
@@ -195,6 +198,9 @@ birdhab/
 | Type de fichier (`document`) | **Détection par octets réels (signature PDF/JPEG/PNG), pas par Content-Type déclaré** | Le Content-Type d'un upload multipart est fourni par le client et donc falsifiable ; un fichier dont le contenu ne correspond à aucune des 3 signatures est rejeté même s'il prétend être un type accepté. |
 | Tests d'intégration | **Un `FlywayMigrationIT` par service (failsafe, `mvn verify`), pas de suite complète `@DataJpaTest`** | Les tests Mockito ne peuvent pas détecter une migration Flyway qui ne correspond pas au mapping JPA (colonne renommée, type incohérent...) — trou réel identifié en consolidation (la migration V2 de `auth` n'avait jamais été exécutée avant ce test). Cible précisément ce trou sans ouvrir un chantier de tests d'intégration complet (requêtes dérivées, etc.), hors scope pour l'instant. |
 | Duplication infra JWT | **Extraite vers `shared/common` (`JwtValidator`, `JwtValidatorService`, `JwtProperties`, `JwtAuthenticationFilter`, `JwtAuthenticationEntryPoint`)** | `JwtAuthenticationEntryPoint` était identique à l'octet près dans les 6 services, `JwtAuthenticationFilter` à 99% — pure infrastructure technique, pas de logique métier, donc pas de coupling métier introduit entre services malgré le code partagé. `auth` garde son propre `JwtService` (émission de jetons en plus de la validation) ; les 5 autres services déclarent explicitement les beans partagés via un `JwtConfig` local plutôt qu'un component-scan automatique, pour éviter tout conflit de bean avec `auth`. |
+| Stack frontend | **React 18 + Vite + TypeScript + Tailwind CSS v3, react-router-dom v6** | React choisi pour l'objectif « book technique » (stack la plus demandée côté recrutement). Tailwind v4 et react-router-dom v7 écartés délibérément : leurs dépendances natives/outillage exigent Node ≥ 20, incompatible avec le poste de développement (Node 18.16) — v3/v6 sont les dernières versions majeures pleinement compatibles Node 18. À remonter dès que Node est mis à jour. |
+| Jetons JWT côté frontend | **Stockés en `localStorage`, pas de cookie httpOnly** | Compromis pragmatique pour une SPA sans BFF : un cookie httpOnly nécessiterait un backend dédié à la gestion de session, hors scope actuel. Accepté en connaissance du risque XSS ; à revoir si un BFF est introduit un jour. |
+| Types TypeScript frontend | **Générés depuis les contrats OpenAPI existants (`openapi-typescript`), jamais écrits à la main** | Réutilise le travail déjà fait sur `docs/api/*.yml` plutôt que de dupliquer la définition des DTOs côté frontend ; a aussi révélé que plusieurs schémas `*Response` ne déclaraient aucun champ `required` alors que le backend les renvoie toujours (corrigé, voir commit `feat: démarrer le frontend`). |
 
 ## Questions en suspens
 

@@ -24,6 +24,7 @@ Développée en architecture microservices avec Java 21 et Spring Boot 3, en ope
 | Documentation API | OpenAPI / Swagger |
 | Conteneurisation | Docker |
 | CI/CD | GitHub Actions |
+| Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
 
 ## Architecture
 
@@ -42,6 +43,7 @@ birdhab/
 │   └── gateway/       # Point d'entrée HTTP unique (routage pur, pas de logique métier)
 ├── shared/
 │   └── common/        # Code technique partagé (JWT, entités de base — pas de logique métier)
+├── frontend/          # SPA React (appelle la Gateway)
 ├── docker/            # Environnement local (Postgres, MinIO)
 └── docs/api/          # Contrats OpenAPI
 ```
@@ -69,8 +71,10 @@ envers la Gateway (voir `CLAUDE.md` pour la justification).
 ## État d'avancement
 
 Backend du MVP fonctionnellement complet : les 6 microservices ci-dessus et la Gateway
-sont entièrement implémentés et testés. Reste hors backend : le frontend (dashboard
-compris), pas encore démarré. Détail complet dans [`CONTEXT.md`](./CONTEXT.md).
+sont entièrement implémentés et testés. Le frontend (`frontend/`) est démarré :
+authentification complète et module Biens en CRUD complet, servant de gabarit pour les
+modules restants (locataires, baux, paiements, documents, tableau de bord).
+Détail complet dans [`CONTEXT.md`](./CONTEXT.md).
 
 ## Démarrer en local
 
@@ -102,6 +106,17 @@ chaque service reste joignable sur son port propre, `gateway` ne fait que router
 - `mvn verify` : ajoute les tests d'intégration (`*IT.java`, ex. validation des
   migrations Flyway), qui nécessitent Postgres démarré (`docker compose up -d`,
   voir `docker/README.md`).
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Écoute sur `http://localhost:5173`, proxifie les appels API vers la Gateway
+(`gateway` doit tourner sur le port 8080). Détails dans `frontend/README.md`.
 
 ## Licence
 
