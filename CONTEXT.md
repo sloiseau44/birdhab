@@ -157,8 +157,10 @@ birdhab/
       + le tableau de bord, tous vérifiés de bout en bout dans un vrai navigateur. Détail
       service par service dans `git log` et le tableau « Décisions actées » ci-dessous —
       cette liste ne duplique plus l'historique complet, qui devenait obsolète trop vite.
-- [x] Tests automatisés frontend (Vitest + Testing Library + MSW, voir « Décisions actées »)
-      couvrant la logique critique et les 5 modules CRUD.
+- [x] **Consolidation frontend** : tests automatisés (Vitest + Testing Library + MSW,
+      logique critique + 5 modules CRUD), revue de gestion d'erreurs (suppressions,
+      téléchargement, `ErrorBoundary`, session expirée) et audit d'accessibilité (lien
+      d'évitement, ARIA, `scope="col"`) — voir « Décisions actées » ci-dessous.
 - [ ] Périmètre MVP finalisé (revue finale du scope avant de passer à autre chose)
 
 ---
@@ -196,6 +198,7 @@ birdhab/
 | Tableau de bord (frontend) | **Stat tiles + meter de progression, pas de graphique à deux axes** | Suit le skill `dataviz` du projet : « attendu vs perçu » sur deux mesures de même nature se prête à un meter (barre de progression), pas à un graphique à deux échelles. Couleur de statut réservée (rouge uniquement pour l'alerte de retard, jamais réutilisée comme couleur de série). |
 | Tests frontend | **Vitest + React Testing Library + MSW, pas de mock d'Axios** | MSW intercepte au niveau réseau (XHR), donc l'intercepteur JWT de `client.ts` (refresh sur 401, déduplication) est testé tel qu'il s'exécute réellement plutôt que via une version mockée. Étendu aux 5 modules CRUD après le socle initial — la vérification manuelle en navigateur reste la référence pour un nouveau module. A révélé deux vrais bugs (`uploadDocument` fixait un `Content-Type: multipart/form-data` sans boundary ; les erreurs sur requêtes `responseType: 'blob'` ne remontaient jamais le vrai message serveur, `Blob` au lieu de JSON) et deux limitations de jsdom sans rapport avec le code applicatif (validation `required` d'un `<input type="file">`, perte du nom de fichier à travers `FormData`+XHR), documentées dans `CLAUDE.md`. |
 | Gestion des erreurs (frontend) | **Chaque mutation de suppression a son propre état d'erreur affiché en `ErrorBanner`, un `ErrorBoundary` global protège contre l'écran blanc, une session réellement expirée redirige vers `/login`** | Revue ciblée : les 5 suppressions (Biens/Locataires/Baux/Paiements/Documents) échouaient silencieusement (pas de `onError`), le téléchargement de document n'avait pas de `catch`, aucun filet pour une exception de rendu inattendue, et un refresh token mort en cours de session laissait l'utilisateur sur une page cassée sans jamais le rediriger vers `/login`. Voir `SESSION_EXPIRED_EVENT` dans `CLAUDE.md`. |
+| Accessibilité (frontend) | **Lien d'évitement, `scope="col"` sur les tableaux, `role="progressbar"` sur les jauges, `role="status"` sur les indicateurs de chargement** | Dernier volet de la consolidation frontend (après tests et gestion d'erreurs). Le point le plus impactant : sans lien d'évitement, un utilisateur clavier devait traverser 8 arrêts de nav latérale à chaque page avant d'atteindre le contenu. |
 
 ## Questions en suspens
 

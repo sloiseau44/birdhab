@@ -34,6 +34,7 @@
 - **Erreurs sur requêtes `responseType: 'blob'` (téléchargement de document, quittance) : ne jamais utiliser `extractErrorMessage` directement.** Axios respecte le `responseType` demandé même sur une réponse d'erreur, donc `error.response.data` est un `Blob`, pas le JSON `ErrorResponse` attendu. Utiliser `extractBlobErrorMessage` (`src/lib/errors.ts`), qui relit le Blob en texte et le parse avant de retomber sur le message générique.
 - **Session expirée en cours d'usage (refresh token mort, pas au montage) : `client.ts` émet `SESSION_EXPIRED_EVENT`, `AuthContext` l'écoute pour déconnecter immédiatement.** Sans ça, l'intercepteur nettoyait bien les jetons mais l'état React (`user`) ne le savait jamais avant un prochain montage — l'utilisateur restait sur une page cassée au lieu d'être redirigé vers `/login` par `RequireAuth`.
 - **`ErrorBoundary` global (`src/components/ErrorBoundary.tsx`, montée dans `main.tsx` autour de toute l'app)** : filet de sécurité contre un écran blanc en cas d'exception de rendu inattendue, pas un mécanisme de gestion d'erreur métier — les erreurs attendues (validation, 4xx/5xx) restent gérées localement par page via des `ErrorBanner`.
+- **Accessibilité frontend : lien d'évitement dans `AppLayout` (cible `#main-content`), `scope="col"` sur tous les `<th>`, `role="progressbar"` avec `aria-valuenow/min/max` sur le `Meter` du tableau de bord, `role="status"` sur les indicateurs « Chargement… ».** À reproduire pour tout nouveau tableau (scope="col") ou nouvelle jauge de progression (role="progressbar").
 
 ## Architecture
 
