@@ -28,6 +28,7 @@
 - **Aucune agrégation cross-service côté serveur** : un service qui a besoin de données détenues par un autre (ex. la quittance PDF de `payment`, qui a besoin du nom/adresse du bailleur et du locataire) ne les récupère jamais lui-même par appel réseau ; c'est l'appelant (frontend/BFF) qui les agrège et les transmet dans le corps de la requête. Voir `docs/api/payment.yml` (`ReceiptRequest`) pour l'exemple appliqué.
 - **Adresse postale sur `User` (`auth`) : ajoutée a posteriori, pas à l'inscription.** `RegisterRequest` ne demande toujours que email/mot de passe/prénom/nom ; l'adresse (nécessaire pour la quittance PDF) se renseigne via `PUT /auth/me`, colonnes nullable en base. Ne pas rendre l'adresse obligatoire à l'inscription : ça alourdirait ce flux pour une donnée qui n'est utile qu'au moment de générer une quittance.
 - **Node du poste de dev : 24 LTS** (mis à jour depuis 18.16 via `winget install OpenJS.NodeJS.LTS`, action confirmée explicitement car changement système). Débloque Tailwind CSS v4 et react-router-dom v7 (utilisés depuis), et Vite 8 (corrige une vulnérabilité esbuild du serveur de dev signalée par `npm audit` depuis le début du frontend). Plus de contrainte de version basse à surveiller pour les futures dépendances frontend.
+- **Tests frontend : Vitest + React Testing Library + MSW**, pas de mock d'Axios — MSW intercepte au niveau réseau (XHR, via `@mswjs/interceptors`) pour rester proche du comportement réel, y compris pour l'intercepteur JWT de `src/api/client.ts`. Fichiers `*.test.ts(x)` à côté du fichier testé, config dans le bloc `test` de `vite.config.ts`, setup global dans `src/test/setup.ts`. `npm test` exécuté en CI (job « Frontend » de `.github/workflows/ci.yml`), en plus — pas à la place — de la vérification manuelle dans un vrai navigateur qui reste la référence pour valider un nouveau module de bout en bout.
 
 ## Architecture
 
@@ -66,11 +67,14 @@ service avec base de données). Le frontend (`frontend/`, React 18 + Vite +
 TypeScript + Tailwind v3) couvre l'authentification, le profil propriétaire,
 et les 5 modules CRUD (Biens, Locataires, Baux, Paiements avec génération
 réelle de quittance PDF, Documents) plus le tableau de bord — chacun vérifié
-de bout en bout dans un vrai navigateur, pas seulement au build. Pour le
-détail de chaque module/décision, voir `git log` (les messages de commit
-documentent le raisonnement) et le tableau « Décisions actées » de
-CONTEXT.md — cette section ne duplique plus l'historique, qui change trop
-vite pour rester à jour ici.
+de bout en bout dans un vrai navigateur, pas seulement au build. Un premier
+socle de tests automatisés frontend existe désormais (Vitest + Testing
+Library + MSW, voir décision ci-dessus) sur la logique critique ; pas encore
+une couverture exhaustive de toutes les pages. Pour le détail de chaque
+module/décision, voir `git log` (les messages de commit documentent le
+raisonnement) et le tableau « Décisions actées » de CONTEXT.md — cette
+section ne duplique plus l'historique, qui change trop vite pour rester à
+jour ici.
 
 **Patterns à reproduire pour tout nouveau code :**
 - Nouveau microservice backend : contrat OpenAPI d'abord, schéma Postgres
@@ -81,12 +85,13 @@ vite pour rester à jour ici.
 - Nouveau module frontend CRUD : `src/api/<module>.ts` typé depuis
   `src/types/api/<service>.ts` (régénéré via `openapi-typescript` si le
   contrat change), page avec `useQuery`/`useMutation`, formulaire +
-  table de liste (voir `PropertiesPage.tsx` comme gabarit) ; résoudre les
-  références inter-entités (ex. `propertyId`) via des `Map` construites
-  depuis `useQuery` plutôt que d'afficher des UUID bruts (voir
-  `LeasesPage.tsx`) ; vérifier dans un vrai navigateur, pas seulement au
-  build — un module a déjà révélé un vrai trou backend (adresse du
-  propriétaire manquante) que `tsc`/`eslint` ne pouvaient pas détecter.
+  table de liste (voir `PropertiesPage.tsx` comme gabarit, y compris son
+  `PropertiesPage.test.tsx`) ; résoudre les références inter-entités (ex.
+  `propertyId`) via des `Map` construites depuis `useQuery` plutôt que
+  d'afficher des UUID bruts (voir `LeasesPage.tsx`) ; vérifier dans un vrai
+  navigateur, pas seulement au build — un module a déjà révélé un vrai trou
+  backend (adresse du propriétaire manquante) que `tsc`/`eslint` ne
+  pouvaient pas détecter.
 - Toute donnée agrégée depuis plusieurs services (quittance PDF, tableau de
   bord) : jamais d'appel réseau serveur-à-serveur, toujours côté appelant
   (voir décision « Aucune agrégation cross-service »).
