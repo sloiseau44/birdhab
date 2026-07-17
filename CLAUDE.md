@@ -35,6 +35,8 @@
 - **Session expirée en cours d'usage (refresh token mort, pas au montage) : `client.ts` émet `SESSION_EXPIRED_EVENT`, `AuthContext` l'écoute pour déconnecter immédiatement.** Sans ça, l'intercepteur nettoyait bien les jetons mais l'état React (`user`) ne le savait jamais avant un prochain montage — l'utilisateur restait sur une page cassée au lieu d'être redirigé vers `/login` par `RequireAuth`.
 - **`ErrorBoundary` global (`src/components/ErrorBoundary.tsx`, montée dans `main.tsx` autour de toute l'app)** : filet de sécurité contre un écran blanc en cas d'exception de rendu inattendue, pas un mécanisme de gestion d'erreur métier — les erreurs attendues (validation, 4xx/5xx) restent gérées localement par page via des `ErrorBanner`.
 - **Accessibilité frontend : lien d'évitement dans `AppLayout` (cible `#main-content`), `scope="col"` sur tous les `<th>`, `role="progressbar"` avec `aria-valuenow/min/max` sur le `Meter` du tableau de bord, `role="status"` sur les indicateurs « Chargement… ».** À reproduire pour tout nouveau tableau (scope="col") ou nouvelle jauge de progression (role="progressbar").
+- **Déploiement : bundle Docker tout-en-un (`docker-compose.yml` à la racine) pour l'usage self-hosted, distinct de `docker/docker-compose.yml` (infra dev-only, inchangé).** Un seul `Dockerfile` générique (`docker/service.Dockerfile`) sert aux 7 services Spring Boot, paramétré par `--build-arg MODULE=services/<nom>` — build Maven du reactor complet (`-am`) puis image JRE seule en runtime. Le frontend a son propre `Dockerfile` (build Vite + Nginx, qui sert les statiques et reverse-proxy `/api/*` vers `gateway`, même contrat que le proxy du serveur de dev Vite). Les URI de routage de `gateway` sont surchargeables par variable d'environnement (`AUTH_SERVICE_URL`...) pour pointer vers les noms de service Docker au lieu de `localhost`. Ne pas lancer les deux compose files en même temps (mêmes noms de conteneurs).
+- **`spring-boot-maven-plugin` a besoin d'une exécution explicite liée à `package` dans le `pluginManagement` racine (`pom.xml`).** Le projet n'hérite pas de `spring-boot-starter-parent` (qui fournirait cette liaison par défaut), donc sans elle `mvn package` produit un jar "plain" non exécutable — invisible en dev puisque `mvn spring-boot:run` ne passe jamais par le jar packagé. Ne pas retirer cette exécution.
 
 ## Architecture
 
@@ -106,7 +108,10 @@ jour ici.
 - Portail locataire, encadrement des loyers, intégrations comptables et
   autres fonctionnalités v2+/Enterprise listées dans CONTEXT.md — hors
   scope tant que non demandées explicitement.
-- Déploiement / mise en production — aucune décision prise à ce stade.
+- Déploiement/hébergement public (nom de domaine, HTTPS, mise à jour) —
+  toujours pas de décision. Le bundle Docker tout-en-un (`docker-compose.yml`
+  à la racine, voir décision « Déploiement » ci-dessus) couvre l'auto-hébergement
+  local/serveur perso, pas une offre hébergée par le projet.
 
 ## Contrats API
 

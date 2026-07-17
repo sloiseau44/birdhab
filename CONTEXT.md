@@ -185,6 +185,11 @@ birdhab/
       complétion) ; deux points de portée clarifiés sans changement de code (révision IRL
       = champ informatif, pas de calcul automatique ; détection des retards = calculée à la
       lecture, pas de job planifié) — voir la note sous le tableau MVP ci-dessus.
+- [x] **Bundle Docker tout-en-un** : `docker-compose.yml` à la racine démarre toute la
+      stack (infra + 6 microservices + Gateway + frontend) en une commande, pour un usage
+      self-hosted sans installer Java/Node/Maven. Vérifié de bout en bout dans un vrai
+      navigateur contre la stack Docker réelle (inscription, CRUD, upload MinIO) — voir
+      « Décisions actées » ci-dessous.
 
 ---
 
@@ -222,6 +227,7 @@ birdhab/
 | Tests frontend | **Vitest + React Testing Library + MSW, pas de mock d'Axios** | MSW intercepte au niveau réseau (XHR), donc l'intercepteur JWT de `client.ts` (refresh sur 401, déduplication) est testé tel qu'il s'exécute réellement plutôt que via une version mockée. Étendu aux 5 modules CRUD après le socle initial — la vérification manuelle en navigateur reste la référence pour un nouveau module. A révélé deux vrais bugs (`uploadDocument` fixait un `Content-Type: multipart/form-data` sans boundary ; les erreurs sur requêtes `responseType: 'blob'` ne remontaient jamais le vrai message serveur, `Blob` au lieu de JSON) et deux limitations de jsdom sans rapport avec le code applicatif (validation `required` d'un `<input type="file">`, perte du nom de fichier à travers `FormData`+XHR), documentées dans `CLAUDE.md`. |
 | Gestion des erreurs (frontend) | **Chaque mutation de suppression a son propre état d'erreur affiché en `ErrorBanner`, un `ErrorBoundary` global protège contre l'écran blanc, une session réellement expirée redirige vers `/login`** | Revue ciblée : les 5 suppressions (Biens/Locataires/Baux/Paiements/Documents) échouaient silencieusement (pas de `onError`), le téléchargement de document n'avait pas de `catch`, aucun filet pour une exception de rendu inattendue, et un refresh token mort en cours de session laissait l'utilisateur sur une page cassée sans jamais le rediriger vers `/login`. Voir `SESSION_EXPIRED_EVENT` dans `CLAUDE.md`. |
 | Accessibilité (frontend) | **Lien d'évitement, `scope="col"` sur les tableaux, `role="progressbar"` sur les jauges, `role="status"` sur les indicateurs de chargement** | Dernier volet de la consolidation frontend (après tests et gestion d'erreurs). Le point le plus impactant : sans lien d'évitement, un utilisateur clavier devait traverser 8 arrêts de nav latérale à chaque page avant d'atteindre le contenu. |
+| Déploiement (self-hosted) | **Bundle Docker tout-en-un** (`docker-compose.yml` racine + `docker/service.Dockerfile` générique + `frontend/Dockerfile`+Nginx), distinct de `docker/docker-compose.yml` (infra dev-only, inchangée) | Demande explicite : rendre l'app facile à utiliser sans installer la toolchain complète. Une seule image `Dockerfile` paramétrée par `--build-arg MODULE=services/<nom>` sert aux 7 services Spring Boot (build Maven du reactor via `-am`, runtime JRE seul), plutôt que 7 Dockerfiles quasi identiques. Nginx sert le frontend buildé et reverse-proxy `/api/*` vers `gateway`, même contrat que le proxy du serveur de dev Vite — pas de CORS à gérer côté backend. A révélé un vrai bug indépendant de Docker : `spring-boot-maven-plugin` n'avait pas d'exécution liée à `package` dans le `pluginManagement` racine (le projet n'hérite pas de `spring-boot-starter-parent`, qui fournit cette liaison par défaut), donc `mvn package` produisait un jar non exécutable pour les 7 services — invisible en dev car `mvn spring-boot:run` ne passe jamais par le jar packagé. Corrigé dans le `pom.xml` racine. |
 
 ## Questions en suspens
 
