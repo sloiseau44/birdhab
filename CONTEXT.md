@@ -91,7 +91,7 @@ birdhab/
 |---|---|
 | **Gestion des biens** | Ajouter/modifier un bien (adresse, type, surface, loyer de référence) |
 | **Gestion des locataires** | Fiche locataire, coordonnées, documents d'identité |
-| **Gestion des baux** | Création de bail, dates, loyer, dépôt de garantie, révision IRL |
+| **Gestion des baux** | Création de bail, dates, loyer, dépôt de garantie, trimestre de référence IRL (champ informatif, voir note) |
 | **Suivi des paiements** | Enregistrer un paiement, détecter les retards, générer une quittance PDF |
 | **Tableau de bord** | Loyers attendus vs perçus, biens occupés/vacants, alertes |
 
@@ -101,13 +101,31 @@ birdhab/
 > frontend (même principe que la quittance PDF de `payment` — voir décision
 > « Aucune agrégation cross-service » dans CLAUDE.md). Fait, voir
 > `src/pages/DashboardPage.tsx`.
+>
+> **Portée exacte de « révision IRL » dans le MVP** : `Lease.irlReferenceQuarter`
+> (ex. `"2026-T1"`) est un champ texte libre, stocké et affiché tel quel — voir
+> `services/lease/.../domain/entity/Lease.java` et `LeasesPage.tsx`. Rien ne
+> calcule automatiquement une révision de loyer à partir de l'indice IRL de
+> l'INSEE, et aucun historique de révision n'est conservé ; c'est au bailleur
+> de calculer et saisir le nouveau loyer lui-même. Le calcul automatique
+> (lookup de l'indice INSEE, recalcul de `rentAmount`, historique) est
+> repoussé en v2+, voir ci-dessous.
+>
+> **Détection des retards de paiement** : `Payment.getStatus()` calcule
+> `LATE`/`PAID`/`PENDING` à la volée depuis `dueDate`/`paidDate` à chaque
+> lecture (jamais persisté, jamais réglable par le client) — voir
+> `services/payment/.../domain/entity/Payment.java`. Toujours à jour par
+> construction, mais aucun job planifié n'existe pour notifier un retard :
+> la détection est passive (visible seulement quand un utilisateur consulte
+> l'app), pas proactive. Notifications automatiques déjà listées en v2+.
 
 ### Hors MVP (v2+)
 
 - Génération de contrats de bail PDF
 - Gestion des charges
 - État des lieux numérique
-- Notifications email automatiques
+- Notifications email automatiques (y compris relance automatique sur retard de paiement)
+- Calcul automatique de la révision IRL (indice INSEE, recalcul de loyer, historique des révisions)
 - Encadrement des loyers
 - Intégrations comptables (Pennylane, Dolibarr)
 - **Portail locataire** : le locataire dispose de son propre compte (rôle `TENANT`,
@@ -161,7 +179,12 @@ birdhab/
       logique critique + 5 modules CRUD), revue de gestion d'erreurs (suppressions,
       téléchargement, `ErrorBoundary`, session expirée) et audit d'accessibilité (lien
       d'évitement, ARIA, `scope="col"`) — voir « Décisions actées » ci-dessous.
-- [ ] Périmètre MVP finalisé (revue finale du scope avant de passer à autre chose)
+- [x] **Périmètre MVP finalisé** : revue de bout en bout (contrats OpenAPI vs contrôleurs,
+      recherche de TODO/stubs, routes frontend, exactitude du README racine). Un vrai écart
+      trouvé et corrigé (README racine décrivait un état du frontend antérieur à sa
+      complétion) ; deux points de portée clarifiés sans changement de code (révision IRL
+      = champ informatif, pas de calcul automatique ; détection des retards = calculée à la
+      lecture, pas de job planifié) — voir la note sous le tableau MVP ci-dessus.
 
 ---
 
@@ -202,4 +225,4 @@ birdhab/
 
 ## Questions en suspens
 
-- [ ] Finaliser le périmètre exact du MVP
+- [x] Finaliser le périmètre exact du MVP (voir « État d'avancement » ci-dessus)

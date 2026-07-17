@@ -70,11 +70,12 @@ envers la Gateway (voir `CLAUDE.md` pour la justification).
 
 ## État d'avancement
 
-Backend du MVP fonctionnellement complet : les 6 microservices ci-dessus et la Gateway
-sont entièrement implémentés et testés. Le frontend (`frontend/`) est démarré :
-authentification complète et module Biens en CRUD complet, servant de gabarit pour les
-modules restants (locataires, baux, paiements, documents, tableau de bord).
-Détail complet dans [`CONTEXT.md`](./CONTEXT.md).
+MVP fonctionnellement complet, backend et frontend. Les 6 microservices ci-dessus et la
+Gateway sont entièrement implémentés et testés. Le frontend (`frontend/`) couvre
+l'authentification, le profil propriétaire, les 5 modules CRUD (biens, locataires, baux,
+paiements avec génération de quittance PDF, documents) et le tableau de bord — chacun
+vérifié de bout en bout dans un vrai navigateur, avec une suite de tests automatisés
+(Vitest + Testing Library + MSW). Détail complet dans [`CONTEXT.md`](./CONTEXT.md).
 
 ## Démarrer en local
 
