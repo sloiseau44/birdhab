@@ -137,22 +137,27 @@ puis `POST /payments/{id}/receipt` en `responseType: 'blob'` pour déclencher
 le téléchargement ; voir décision « Aucune agrégation cross-service »
 ci-dessus, et le commit `feat(auth): ajouter l'adresse postale du
 propriétaire` pour le trou qu'il a fallu combler côté backend en cours de
-route) en CRUD complet. Vérifié de bout en bout dans un vrai navigateur à
+route) et **Documents** (`src/pages/DocumentsPage.tsx` : pas d'édition, le
+backend n'expose pas de `PUT /documents/{id}` — seulement upload
+multipart/form-data, téléchargement et suppression ; téléchargement en
+`responseType: 'blob'`, même pattern que la quittance PDF) en CRUD complet
+(CRD pour Documents). Vérifié de bout en bout dans un vrai navigateur à
 chaque fois (pas seulement au build) : inscription → connexion auto → CRUD
-réel via Gateway → service → Postgres → déconnexion → garde de route ; pour
-Paiements, génération réelle d'un PDF confirmée par inspection réseau
-(200 OK, contenu binaire).
+réel via Gateway → service → Postgres/MinIO → déconnexion → garde de route ;
+pour Paiements et Documents, contenu binaire réel confirmé par inspection
+réseau (200 OK) — upload testé en injectant un fichier via `DataTransfer`
+en JS (pas de sélecteur de fichier natif dans l'environnement de test).
 
-Prochaine étape suggérée : construire les modules restants sur le même
-gabarit — **Documents** (upload multipart) et le **tableau de bord**
-(agrégation property/lease/payment côté client, voir CONTEXT.md). Chaque
-module suit le même schéma que `PropertiesPage.tsx` : fichier
-`src/api/<module>.ts` typé depuis `src/types/api/<service>.ts`, page avec
-`useQuery`/`useMutation` (TanStack Query), formulaire de création/édition,
-table de liste. Avant de commencer un module qui dépend de données d'un
-autre service (comme Paiements dépendait de l'adresse du propriétaire),
-vérifier que toutes les données nécessaires existent bien côté backend —
-ne pas supposer que le contrat OpenAPI actuel est complet.
+Prochaine étape suggérée : le **tableau de bord** (agrégation
+property/lease/payment côté client, voir CONTEXT.md), dernier module
+frontend du MVP. Contrairement aux modules précédents, ce n'est pas un
+simple CRUD sur un contrat OpenAPI existant : il faut décider comment
+présenter loyers attendus vs perçus, biens occupés/vacants et alertes de
+retard à partir des données déjà chargées par les autres modules (`leases`,
+`payments`, `properties`). Avant de commencer un module qui dépend de
+données d'un autre service (comme Paiements dépendait de l'adresse du
+propriétaire), vérifier que toutes les données nécessaires existent bien
+côté backend — ne pas supposer que le contrat OpenAPI actuel est complet.
 
 Si un nouveau microservice backend s'avère nécessaire un jour (ex.
 `messaging` pour le portail locataire, hors MVP), suivre la même méthode que

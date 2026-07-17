@@ -166,10 +166,10 @@ birdhab/
 - [x] Adresse postale ajoutée au profil `auth` (`PUT /auth/me`, migration V3) — trou détecté
       en construisant le flux de quittance PDF côté frontend, comblé avant de continuer
 - [x] Frontend démarré (`frontend/` — React 18 + Vite + TypeScript + Tailwind v3) :
-      authentification complète, page Mon profil, modules Biens, Locataires, Baux et
-      Paiements (avec génération réelle de quittance PDF) en CRUD complet, tous vérifiés
-      de bout en bout dans le navigateur
-- [ ] Frontend : modules restants (documents, tableau de bord)
+      authentification complète, page Mon profil, modules Biens, Locataires, Baux,
+      Paiements (avec génération réelle de quittance PDF) et Documents (upload/
+      téléchargement réels) en CRUD complet, tous vérifiés de bout en bout dans le navigateur
+- [ ] Frontend : tableau de bord (dernier module du MVP)
 - [ ] Périmètre MVP finalisé
 
 ---
