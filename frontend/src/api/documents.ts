@@ -12,9 +12,9 @@ export async function uploadDocument(tenantId: string, file: File): Promise<Docu
   const formData = new FormData()
   formData.append('tenantId', tenantId)
   formData.append('file', file)
-  const { data } = await apiClient.post<Document>('/documents', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  // Pas de Content-Type explicite : Axios/le navigateur doit générer lui-même
+  // le boundary multipart, qu'un header fixé à la main ne peut pas fournir.
+  const { data } = await apiClient.post<Document>('/documents', formData)
   return data
 }
 
