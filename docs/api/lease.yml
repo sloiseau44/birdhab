@@ -237,6 +237,9 @@ components:
 
     LeaseResponse:
       type: object
+      required:
+        [id, ownerId, propertyId, tenantId, startDate, endDate, rentAmount,
+         depositAmount, irlReferenceQuarter, status, createdAt, updatedAt]
       properties:
         id:
           type: string

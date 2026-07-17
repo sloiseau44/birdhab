@@ -207,6 +207,7 @@ components:
 
     AuthResponse:
       type: object
+      required: [accessToken, refreshToken, expiresIn]
       properties:
         accessToken:
           type: string
@@ -222,6 +223,7 @@ components:
 
     UserProfile:
       type: object
+      required: [id, email, roles]
       properties:
         id:
           type: string
@@ -231,8 +233,10 @@ components:
           format: email
         firstName:
           type: string
+          nullable: true
         lastName:
           type: string
+          nullable: true
         roles:
           type: array
           items:

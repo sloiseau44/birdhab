@@ -226,6 +226,7 @@ components:
 
     PropertyResponse:
       type: object
+      required: [id, ownerId, address, type, surface, referenceRent, createdAt, updatedAt]
       properties:
         id:
           type: string

@@ -225,6 +225,7 @@ components:
 
     TenantResponse:
       type: object
+      required: [id, ownerId, firstName, lastName, email, createdAt, updatedAt]
       properties:
         id:
           type: string

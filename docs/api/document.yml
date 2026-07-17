@@ -211,6 +211,7 @@ components:
   schemas:
     DocumentResponse:
       type: object
+      required: [id, ownerId, tenantId, fileName, contentType, sizeBytes, createdAt]
       properties:
         id:
           type: string
