@@ -157,8 +157,8 @@ birdhab/
       + le tableau de bord, tous vérifiés de bout en bout dans un vrai navigateur. Détail
       service par service dans `git log` et le tableau « Décisions actées » ci-dessous —
       cette liste ne duplique plus l'historique complet, qui devenait obsolète trop vite.
-- [x] Premier socle de tests automatisés frontend (Vitest + Testing Library + MSW, voir
-      « Décisions actées ») sur la logique critique — pas encore une couverture exhaustive.
+- [x] Tests automatisés frontend (Vitest + Testing Library + MSW, voir « Décisions actées »)
+      couvrant la logique critique et les 5 modules CRUD.
 - [ ] Périmètre MVP finalisé (revue finale du scope avant de passer à autre chose)
 
 ---
@@ -194,7 +194,7 @@ birdhab/
 | Types TypeScript frontend | **Générés depuis les contrats OpenAPI existants (`openapi-typescript`), jamais écrits à la main** | Réutilise le travail déjà fait sur `docs/api/*.yml` plutôt que de dupliquer la définition des DTOs côté frontend ; a aussi révélé que plusieurs schémas `*Response` ne déclaraient aucun champ `required` alors que le backend les renvoie toujours (corrigé, voir commit `feat: démarrer le frontend`). |
 | Adresse du propriétaire (`auth`) | **Ajoutée a posteriori via `PUT /auth/me`, pas à l'inscription** | La quittance PDF (`payment`) a besoin de l'adresse du bailleur, absente du modèle `User` jusqu'ici — trou détecté en construisant le module Paiements du frontend. Plutôt que de l'exiger à l'inscription (alourdit ce flux pour une donnée seulement utile au moment de générer une quittance), elle se renseigne via une page « Mon profil » dédiée, colonnes nullable en base. |
 | Tableau de bord (frontend) | **Stat tiles + meter de progression, pas de graphique à deux axes** | Suit le skill `dataviz` du projet : « attendu vs perçu » sur deux mesures de même nature se prête à un meter (barre de progression), pas à un graphique à deux échelles. Couleur de statut réservée (rouge uniquement pour l'alerte de retard, jamais réutilisée comme couleur de série). |
-| Tests frontend | **Vitest + React Testing Library + MSW, pas de mock d'Axios** | MSW intercepte au niveau réseau (XHR), donc l'intercepteur JWT de `client.ts` (refresh sur 401, déduplication) est testé tel qu'il s'exécute réellement plutôt que via une version mockée. Portée initiale volontairement ciblée sur la logique critique (intercepteur, `AuthContext`/`RequireAuth`, un module CRUD en gabarit) plutôt qu'une couverture exhaustive de toutes les pages — la vérification manuelle en navigateur reste la référence pour un nouveau module. |
+| Tests frontend | **Vitest + React Testing Library + MSW, pas de mock d'Axios** | MSW intercepte au niveau réseau (XHR), donc l'intercepteur JWT de `client.ts` (refresh sur 401, déduplication) est testé tel qu'il s'exécute réellement plutôt que via une version mockée. Étendu aux 5 modules CRUD après le socle initial — la vérification manuelle en navigateur reste la référence pour un nouveau module. A aussi révélé un vrai bug (`uploadDocument` fixait un `Content-Type: multipart/form-data` sans boundary, corrigé) et deux limitations de jsdom sans rapport avec le code applicatif (validation `required` d'un `<input type="file">`, perte du nom de fichier à travers `FormData`+XHR), documentées dans `CLAUDE.md`. |
 
 ## Questions en suspens
 

@@ -33,12 +33,17 @@ Vitest + React Testing Library + MSW (mock des appels HTTP au niveau réseau,
 pas de mock d'Axios). Convention : `*.test.ts(x)` à côté du fichier testé.
 Config dans `vite.config.ts` (bloc `test`), setup global (matchers
 `@testing-library/jest-dom`, cycle de vie du serveur MSW) dans
-`src/test/setup.ts`. Portée actuelle : logique critique uniquement
-(intercepteur JWT/refresh de `src/api/client.ts`, `AuthContext`/`RequireAuth`,
-et `PropertiesPage` comme gabarit d'un module CRUD complet) — pas (encore)
-une couverture exhaustive de toutes les pages. Exécutés en CI (`.github/workflows/ci.yml`,
-job « Frontend »), en plus de la vérification manuelle dans un vrai navigateur
+`src/test/setup.ts`. Couvre la logique critique (intercepteur JWT/refresh de
+`src/api/client.ts`, `AuthContext`/`RequireAuth`) et les 5 modules CRUD
+(Biens, Locataires, Baux, Paiements avec génération de quittance, Documents
+avec upload/download). Exécutés en CI (`.github/workflows/ci.yml`, job
+« Frontend »), en plus de la vérification manuelle dans un vrai navigateur
 qui reste la référence pour valider un nouveau module de bout en bout.
+
+Deux limitations de jsdom à connaître si un test touche à un `<input type="file">` :
+validation `required` toujours en échec même rempli (contourner avec
+`fireEvent.submit(form)` plutôt qu'un clic sur le bouton), et perte du nom de
+fichier à travers `FormData` + XHR (se limiter à `request.text()` côté MSW).
 
 ## Types API générés depuis OpenAPI
 
