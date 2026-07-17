@@ -49,6 +49,18 @@
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>${spring-boot.version}</version>
+                    <!-- Sans spring-boot-starter-parent comme parent, cette exécution n'est pas
+                         liée par défaut : sans elle, `mvn package` produit un jar "plain" (sans
+                         les dépendances, non exécutable) plutôt que le jar Spring Boot repackagé.
+                         Jamais remarqué jusqu'ici car le dev local passe par `spring-boot:run`,
+                         qui n'a pas besoin du jar packagé. -->
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

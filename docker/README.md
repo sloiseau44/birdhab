@@ -5,6 +5,11 @@ au développement local (PostgreSQL + MinIO). Il ne contient volontairement
 aucun service applicatif Birdhab : chaque microservice tourne en direct
 depuis l'IDE ou via `mvn spring-boot:run` / Claude Code, pointé sur cette infra.
 
+> Pour lancer l'application complète (tous les services + frontend) en une seule
+> commande, sans installer Java/Node, voir `docker-compose.yml` à la racine du repo
+> et la section « Installation rapide » du `README.md` racine — ne pas mélanger les
+> deux, mêmes noms de conteneurs.
+
 ## Lancer l'environnement
 
 ```bash

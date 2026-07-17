@@ -1,0 +1,192 @@
+# Bundle "tout-en-un" : toute la stack Birdhab (infra + 6 microservices + Gateway +
+# frontend) démarrée en une seule commande, pour un usage self-hosted sans avoir à lancer
+# chaque service à la main. Pour le développement au quotidien (services lancés en
+# direct via `mvn spring-boot:run` / `npm run dev`), voir docker/docker-compose.yml à la
+# place, qui ne fournit que l'infra (Postgres + MinIO).
+#
+# Démarrage :
+#   cp .env.example .env   # puis changer les valeurs avant tout usage réel
+#   docker compose up -d --build
+# Accès : http://localhost:8888 (ou $BIRDHAB_PORT si défini dans .env)
+
+name: birdhab
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: birdhab-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: birdhab
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-birdhab}
+      POSTGRES_DB: birdhab
+    volumes:
+      - birdhab_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U birdhab -d birdhab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: birdhab-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: birdhab
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-birdhab123}
+    volumes:
+      - birdhab_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  auth:
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        MODULE: services/auth
+    container_name: birdhab-auth
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/birdhab
+      SPRING_DATASOURCE_USERNAME: birdhab
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-birdhab}
+      JWT_SECRET: ${JWT_SECRET:-changeme-local-dev-secret-key-not-for-production-use-only}
+
+  property:
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        MODULE: services/property
+    container_name: birdhab-property
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/birdhab
+      SPRING_DATASOURCE_USERNAME: birdhab
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-birdhab}
+      JWT_SECRET: ${JWT_SECRET:-changeme-local-dev-secret-key-not-for-production-use-only}
+
+  tenant:
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        MODULE: services/tenant
+    container_name: birdhab-tenant
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/birdhab
+      SPRING_DATASOURCE_USERNAME: birdhab
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-birdhab}
+      JWT_SECRET: ${JWT_SECRET:-changeme-local-dev-secret-key-not-for-production-use-only}
+
+  lease:
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        MODULE: services/lease
+    container_name: birdhab-lease
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/birdhab
+      SPRING_DATASOURCE_USERNAME: birdhab
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-birdhab}
+      JWT_SECRET: ${JWT_SECRET:-changeme-local-dev-secret-key-not-for-production-use-only}
+
+  payment:
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        MODULE: services/payment
+    container_name: birdhab-payment
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/birdhab
+      SPRING_DATASOURCE_USERNAME: birdhab
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-birdhab}
+      JWT_SECRET: ${JWT_SECRET:-changeme-local-dev-secret-key-not-for-production-use-only}
+
+  document:
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        MODULE: services/document
+    container_name: birdhab-document
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/birdhab
+      SPRING_DATASOURCE_USERNAME: birdhab
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-birdhab}
+      JWT_SECRET: ${JWT_SECRET:-changeme-local-dev-secret-key-not-for-production-use-only}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: birdhab
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-birdhab123}
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/service.Dockerfile
+      args:
+        MODULE: services/gateway
+    container_name: birdhab-gateway
+    restart: unless-stopped
+    depends_on:
+      - auth
+      - property
+      - tenant
+      - lease
+      - payment
+      - document
+    environment:
+      AUTH_SERVICE_URL: http://auth:8081
+      PROPERTY_SERVICE_URL: http://property:8082
+      TENANT_SERVICE_URL: http://tenant:8083
+      LEASE_SERVICE_URL: http://lease:8084
+      PAYMENT_SERVICE_URL: http://payment:8085
+      DOCUMENT_SERVICE_URL: http://document:8086
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: birdhab-frontend
+    restart: unless-stopped
+    depends_on:
+      - gateway
+    ports:
+      - "${BIRDHAB_PORT:-8888}:80"
+
+volumes:
+  birdhab_postgres_data:
+  birdhab_minio_data:
