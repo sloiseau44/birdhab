@@ -116,14 +116,16 @@ propre à `auth`, qui implémente directement `JwtValidator`.
 **Frontend démarré** (`frontend/`, React 18 + Vite + TypeScript + Tailwind v3,
 voir décisions ci-dessus et `frontend/README.md`). En place : authentification
 complète (login/register/logout, JWT en localStorage, rafraîchissement
-automatique sur 401, garde de route), layout avec navigation, et le module
-**Biens** en CRUD complet (`src/pages/PropertiesPage.tsx`) servant de gabarit.
-Vérifié de bout en bout dans un vrai navigateur (pas seulement au build) :
-inscription → connexion auto → CRUD réel via Gateway → property → Postgres →
-déconnexion → garde de route.
+automatique sur 401, garde de route), layout avec navigation, et les modules
+**Biens** (`src/pages/PropertiesPage.tsx`, gabarit initial) et **Locataires**
+(`src/pages/TenantsPage.tsx`, avec champs facultatifs téléphone/adresse — voir
+comment `TenantsPage` omet l'adresse de la requête si tous ses sous-champs
+sont vides) en CRUD complet. Vérifié de bout en bout dans un vrai navigateur
+à chaque fois (pas seulement au build) : inscription → connexion auto → CRUD
+réel via Gateway → service → Postgres → déconnexion → garde de route.
 
 Prochaine étape suggérée : construire les modules restants sur le même
-gabarit que Biens — **Locataires**, **Baux**, **Paiements** (avec le flux de
+gabarit — **Baux**, **Paiements** (avec le flux de
 génération de quittance PDF : le frontend doit agréger nom/adresse du
 bailleur via `/auth/me`, nom du locataire via `tenant`, adresse du bien via
 `property`, puis appeler `POST /payments/{id}/receipt`, voir décision
