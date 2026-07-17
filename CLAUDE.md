@@ -37,6 +37,7 @@
 - **Accessibilité frontend : lien d'évitement dans `AppLayout` (cible `#main-content`), `scope="col"` sur tous les `<th>`, `role="progressbar"` avec `aria-valuenow/min/max` sur le `Meter` du tableau de bord, `role="status"` sur les indicateurs « Chargement… ».** À reproduire pour tout nouveau tableau (scope="col") ou nouvelle jauge de progression (role="progressbar").
 - **Déploiement : bundle Docker tout-en-un (`docker-compose.yml` à la racine) pour l'usage self-hosted, distinct de `docker/docker-compose.yml` (infra dev-only, inchangé).** Un seul `Dockerfile` générique (`docker/service.Dockerfile`) sert aux 7 services Spring Boot, paramétré par `--build-arg MODULE=services/<nom>` — build Maven du reactor complet (`-am`) puis image JRE seule en runtime. Le frontend a son propre `Dockerfile` (build Vite + Nginx, qui sert les statiques et reverse-proxy `/api/*` vers `gateway`, même contrat que le proxy du serveur de dev Vite). Les URI de routage de `gateway` sont surchargeables par variable d'environnement (`AUTH_SERVICE_URL`...) pour pointer vers les noms de service Docker au lieu de `localhost`. Ne pas lancer les deux compose files en même temps (mêmes noms de conteneurs).
 - **`spring-boot-maven-plugin` a besoin d'une exécution explicite liée à `package` dans le `pluginManagement` racine (`pom.xml`).** Le projet n'hérite pas de `spring-boot-starter-parent` (qui fournirait cette liaison par défaut), donc sans elle `mvn package` produit un jar "plain" non exécutable — invisible en dev puisque `mvn spring-boot:run` ne passe jamais par le jar packagé. Ne pas retirer cette exécution.
+- **Déploiement gratuit sur Render (`render.yaml`), en plus du bundle Docker tout-en-un.** Motivé par le futur portail locataire : une instance qui doit rester accessible en permanence, pas seulement quand le PC du propriétaire tourne. Postgres et le stockage documents restent **externes à Render** (Neon, Cloudflare R2) — son tier gratuit supprime sa base Postgres après 44 jours et n'autorise aucun disque persistant pour les services web. Autre limite du tier gratuit : un service web gratuit ne peut pas *recevoir* de trafic réseau privé Render (seulement en émettre), donc la Gateway appelle les 6 services via leurs URL publiques `*.onrender.com` (variables `sync: false`, renseignées à la main après le premier déploiement), pas via `fromService`/réseau interne qui ne fonctionnerait pas sur ce tier. `render.yaml` ne supportant pas les `--build-arg`, chaque service backend a son propre `docker/<service>.Dockerfile` figé plutôt que le `docker/service.Dockerfile` générique. Le frontend lit l'URL de la Gateway via `GATEWAY_URL` substituée au démarrage du conteneur (`frontend/nginx.conf.template`, templating Nginx officiel), puisqu'elle diffère entre Docker Compose local et Render. **Non déployé de bout en bout faute de compte Render/Neon/Cloudflare** — vérifié uniquement contre la documentation officielle de Render ; si un déploiement réel révèle un écart, corriger ce fichier et `render.yaml` en conséquence.
 
 ## Architecture
 
@@ -105,13 +106,15 @@ jour ici.
   (voir décision « Aucune agrégation cross-service »).
 
 **Chantiers restants, aucun n'est urgent — à discuter avant de commencer :**
-- Portail locataire, encadrement des loyers, intégrations comptables et
-  autres fonctionnalités v2+/Enterprise listées dans CONTEXT.md — hors
-  scope tant que non demandées explicitement.
-- Déploiement/hébergement public (nom de domaine, HTTPS, mise à jour) —
-  toujours pas de décision. Le bundle Docker tout-en-un (`docker-compose.yml`
-  à la racine, voir décision « Déploiement » ci-dessus) couvre l'auto-hébergement
-  local/serveur perso, pas une offre hébergée par le projet.
+- Portail locataire — le prochain demandé (compte + connexion locataire lié à sa
+  fiche `Tenant` existante, puis accès à ses propres documents ; la messagerie
+  avec le propriétaire viendrait ensuite, à part, nouveau microservice `messaging`).
+  Motive aussi le déploiement Render (instance permanente).
+- Encadrement des loyers, intégrations comptables et autres fonctionnalités
+  v2+/Enterprise listées dans CONTEXT.md — hors scope tant que non demandées
+  explicitement.
+- `render.yaml` jamais déployé pour de vrai (pas de compte Render/Neon/Cloudflare
+  disponible) — à vérifier/corriger au premier déploiement réel.
 
 ## Contrats API
 
