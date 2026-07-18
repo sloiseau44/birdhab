@@ -53,3 +53,21 @@ export function isRateLimited(error: unknown): boolean {
     (error as { response?: { status?: number } }).response?.status === 429
   )
 }
+
+/**
+ * Un service Render gratuit endormi répond 429 ("hibernate-rate-limited") ou 502/503/504
+ * (page générique Render, service pas encore joignable) pendant son réveil — jamais une
+ * réponse applicative. Tout le reste (y compris un 401/404 applicatif) veut dire que la
+ * chaîne frontend -> Gateway -> service visé répond réellement. Utilisé par
+ * useBackendWarmup/useServicesWarmup pour détecter la fin du réveil, et par le retry
+ * global de React Query (voir main.tsx) pour ne jamais relancer un 429 — le relancer ne
+ * ferait que prolonger le blocage côté Render plutôt que d'aider.
+ */
+export function isServiceUnavailable(error: unknown): boolean {
+  if (isRateLimited(error)) return true
+  if (typeof error !== 'object' || error === null || !('response' in error)) {
+    return true // erreur réseau, aucune réponse du tout : pas prêt
+  }
+  const status = (error as { response?: { status?: number } }).response?.status
+  return typeof status === 'number' && status >= 502 && status <= 504
+}

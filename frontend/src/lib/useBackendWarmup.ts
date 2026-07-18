@@ -1,22 +1,9 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
+import { isServiceUnavailable } from './errors'
 
 const RETRY_DELAY_MS = 4000
 const MAX_WARMUP_MS = 60000
-
-/**
- * Un service Render gratuit endormi répond 429 ("hibernate-rate-limited") ou 502
- * (page générique Render, service pas encore joignable) pendant son réveil — jamais
- * une réponse applicative. Tout le reste (y compris un 401, cas normal d'un visiteur
- * pas connecté) veut dire que la chaîne frontend -> gateway -> auth répond réellement.
- */
-function isBackendUnavailable(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null || !('response' in error)) {
-    return true // erreur réseau, aucune réponse du tout : pas prêt
-  }
-  const status = (error as { response?: { status?: number } }).response?.status
-  return status === 429 || (typeof status === 'number' && status >= 502 && status <= 504)
-}
 
 /**
  * Tente silencieusement de réveiller la chaîne Gateway -> auth dès le montage (requête
@@ -38,7 +25,7 @@ export function useBackendWarmup() {
         await axios.get('/api/auth/me')
       } catch (err) {
         if (cancelled) return
-        if (isBackendUnavailable(err) && Date.now() < deadline) {
+        if (isServiceUnavailable(err) && Date.now() < deadline) {
           timeoutId = window.setTimeout(ping, RETRY_DELAY_MS)
           return
         }
