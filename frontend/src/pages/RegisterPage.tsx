@@ -5,7 +5,10 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { extractErrorMessage } from '../lib/errors'
+import { extractErrorMessage, isRateLimited } from '../lib/errors'
+import { useCooldown } from '../lib/useCooldown'
+
+const WAKE_UP_COOLDOWN_SECONDS = 60
 
 export function RegisterPage() {
   const { register } = useAuth()
@@ -16,6 +19,7 @@ export function RegisterPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { secondsLeft, start } = useCooldown()
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -25,7 +29,11 @@ export function RegisterPage() {
       await register(email, password, firstName || undefined, lastName || undefined)
       navigate('/', { replace: true })
     } catch (err) {
-      setError(extractErrorMessage(err, "Impossible de créer le compte"))
+      if (isRateLimited(err)) {
+        start(WAKE_UP_COOLDOWN_SECONDS)
+      } else {
+        setError(extractErrorMessage(err, "Impossible de créer le compte"))
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -37,6 +45,11 @@ export function RegisterPage() {
         <h1 className="text-xl font-semibold text-slate-900">Créer un compte propriétaire</h1>
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           {error && <ErrorBanner message={error} />}
+          {secondsLeft > 0 && (
+            <ErrorBanner
+              message={`Le serveur se réveille après une période d'inactivité (offre gratuite) — réessaie dans ${secondsLeft}s.`}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Input label="Prénom" name="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
             <Input label="Nom" name="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
@@ -60,8 +73,8 @@ export function RegisterPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button type="submit" disabled={isSubmitting} className="mt-2">
-            {isSubmitting ? 'Création…' : 'Créer mon compte'}
+          <Button type="submit" disabled={isSubmitting || secondsLeft > 0} className="mt-2">
+            {isSubmitting ? 'Création…' : secondsLeft > 0 ? `Réessaie dans ${secondsLeft}s` : 'Créer mon compte'}
           </Button>
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">

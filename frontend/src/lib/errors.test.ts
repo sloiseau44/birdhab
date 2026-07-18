@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractBlobErrorMessage, extractErrorMessage } from './errors'
+import { extractBlobErrorMessage, extractErrorMessage, isRateLimited } from './errors'
 
 describe('extractErrorMessage', () => {
   it('extrait le message depuis une erreur Axios avec un corps ErrorResponse', () => {
@@ -37,5 +37,19 @@ describe('extractBlobErrorMessage', () => {
   it('délègue à extractErrorMessage quand le corps n\'est pas un Blob', async () => {
     const error = { response: { data: { message: 'Erreur classique' } } }
     await expect(extractBlobErrorMessage(error)).resolves.toBe('Erreur classique')
+  })
+})
+
+describe('isRateLimited', () => {
+  it('reconnaît une erreur Axios avec statut 429', () => {
+    expect(isRateLimited({ response: { status: 429 } })).toBe(true)
+  })
+
+  it('rejette tout autre statut ou forme inattendue', () => {
+    expect(isRateLimited({ response: { status: 500 } })).toBe(false)
+    expect(isRateLimited({ response: { status: 401 } })).toBe(false)
+    expect(isRateLimited(new Error('boom'))).toBe(false)
+    expect(isRateLimited(null)).toBe(false)
+    expect(isRateLimited(undefined)).toBe(false)
   })
 })

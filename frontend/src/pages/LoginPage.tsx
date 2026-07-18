@@ -5,7 +5,10 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { extractErrorMessage } from '../lib/errors'
+import { extractErrorMessage, isRateLimited } from '../lib/errors'
+import { useCooldown } from '../lib/useCooldown'
+
+const WAKE_UP_COOLDOWN_SECONDS = 60
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -15,6 +18,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { secondsLeft, start } = useCooldown()
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -25,7 +29,11 @@ export function LoginPage() {
       const from = (location.state as { from?: Location })?.from?.pathname ?? '/'
       navigate(from, { replace: true })
     } catch (err) {
-      setError(extractErrorMessage(err, 'Email ou mot de passe incorrect'))
+      if (isRateLimited(err)) {
+        start(WAKE_UP_COOLDOWN_SECONDS)
+      } else {
+        setError(extractErrorMessage(err, 'Email ou mot de passe incorrect'))
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -37,6 +45,11 @@ export function LoginPage() {
         <h1 className="text-xl font-semibold text-slate-900">Connexion à Birdhab</h1>
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           {error && <ErrorBanner message={error} />}
+          {secondsLeft > 0 && (
+            <ErrorBanner
+              message={`Le serveur se réveille après une période d'inactivité (offre gratuite) — réessaie dans ${secondsLeft}s.`}
+            />
+          )}
           <Input
             label="Email"
             type="email"
@@ -55,8 +68,8 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button type="submit" disabled={isSubmitting} className="mt-2">
-            {isSubmitting ? 'Connexion…' : 'Se connecter'}
+          <Button type="submit" disabled={isSubmitting || secondsLeft > 0} className="mt-2">
+            {isSubmitting ? 'Connexion…' : secondsLeft > 0 ? `Réessaie dans ${secondsLeft}s` : 'Se connecter'}
           </Button>
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">

@@ -37,3 +37,19 @@ export async function extractBlobErrorMessage(
   }
   return extractErrorMessage(error, fallback)
 }
+
+/**
+ * 429 renvoyé par la couche edge de Render pendant qu'un service gratuit se réveille
+ * après une période d'inactivité (voir décision « Render » dans CLAUDE.md) — jamais un
+ * 429 applicatif, l'appli n'a aucune autre logique de rate-limit. Sert à distinguer ce
+ * cas d'une vraie erreur de formulaire, pour proposer un délai plutôt qu'un message
+ * d'échec qui inciterait à recliquer et prolonger le blocage.
+ */
+export function isRateLimited(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    (error as { response?: { status?: number } }).response?.status === 429
+  )
+}
