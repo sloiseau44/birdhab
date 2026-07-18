@@ -58,8 +58,10 @@ sur deux autres services gratuits — **3 comptes gratuits à créer avant de co
 
 Une fois les 3 comptes créés :
 
-1. **Base de données** : sur Neon, crée un projet Postgres (nom libre). Note l'hôte, le
-   nom de la base, l'utilisateur et le mot de passe depuis son tableau de bord.
+1. **Base de données** : sur Neon, crée un projet Postgres (nom libre, version **Postgres
+   16** — celle utilisée partout ailleurs dans le projet, voir `docker-compose.yml`).
+   Note l'hôte, le nom de la base, l'utilisateur et le mot de passe depuis son tableau de
+   bord.
 2. **Stockage des documents** : sur Cloudflare, section R2, crée un bucket (nom libre),
    puis un jeton d'API avec accès lecture/écriture sur ce bucket (10 Go gratuits à vie,
    compatible S3 — le code parle déjà ce protocole via le SDK MinIO, aucune modification
