@@ -80,12 +80,14 @@ Une fois les 3 comptes créés :
      fichiers pendant une période donnée, ce qui casserait la fonction « Supprimer »
      de Birdhab.
 
-   L'**endpoint S3** du bucket est affiché directement sur sa page une fois créé
-   (10 Go gratuits à vie, compatible S3 — le code parle déjà ce protocole via le SDK
-   MinIO, aucune modification de code nécessaire). Puis **B2 Cloud Storage → Application
-   Keys → Add a New Application Key**, en lui donnant accès (lecture/écriture) à ce
-   bucket. Note tout de suite la clé (`applicationKey`) affichée : Backblaze ne la
-   remontre plus jamais ensuite.
+   L'**endpoint S3** du bucket est affiché directement sur sa page une fois créé — en
+   français, le champ s'appelle **« Point de terminaison »** (ex.
+   `s3.eu-central-003.backblazeb2.com`) — **ajoute `https://` devant**, Backblaze ne
+   l'affiche que sans le préfixe (10 Go gratuits à vie, compatible S3 — le code parle
+   déjà ce protocole via le SDK MinIO, aucune modification de code nécessaire). Puis
+   **B2 Cloud Storage → Application Keys → Add a New Application Key**, en lui donnant
+   accès (lecture/écriture) à ce bucket. Note tout de suite la clé (`applicationKey`)
+   affichée : Backblaze ne la remontre plus jamais ensuite.
    > Non testé de bout en bout par manque d'accès à un vrai compte Backblaze — signale
    > tout souci de compatibilité si tu rencontres une erreur au premier upload.
 3. **Déploiement** : clique le bouton « Deploy to Render » ci-dessus (connexion à Render

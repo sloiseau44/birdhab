@@ -489,12 +489,26 @@
       "&nbsp;&nbsp;• <strong>Privé</strong> (pas Public) — pièces d'identité de locataires.<br>" +
       "&nbsp;&nbsp;• <strong>Default Encryption : Activer</strong> (SSE-B2) — chiffrement au repos géré par Backblaze, gratuit, transparent pour l'appli.<br>" +
       "&nbsp;&nbsp;• <strong>Object Lock : Désactiver</strong> — sinon la suppression des fichiers serait bloquée pendant une période donnée, ce qui casserait la fonction « Supprimer » de Birdhab.<br>" +
-      "L'endpoint S3 du bucket s'affiche directement sur sa page une fois créé — copie-le ci-dessous.<br>" +
+      "L'endpoint S3 du bucket s'affiche directement sur sa page une fois créé — en français, le champ s'appelle « Point de terminaison » (ex. <code>s3.eu-central-003.backblazeb2.com</code>). " +
+      "<strong>Ajoute <code>https://</code> devant</strong> en le collant ci-dessous : Backblaze ne l'affiche que sans le préfixe.<br>" +
       "2. <strong>B2 Cloud Storage → Application Keys → Add a New Application Key</strong>, en lui donnant accès " +
       "(lecture/écriture) à ce bucket. Note tout de suite la clé (<code>applicationKey</code>) affichée : " +
       "Backblaze ne la remontrera plus jamais ensuite."
     }));
     card.appendChild(textInput("Endpoint S3 (affiché sur la page du bucket)", state.storage.endpoint, function (v) { state.storage.endpoint = v; }, { placeholder: "https://s3.eu-central-003.backblazeb2.com", field: "storage-endpoint" }));
+    var endpointInput = card.querySelector('[data-field="storage-endpoint"]');
+    if (endpointInput) {
+      // Backblaze affiche le "Point de terminaison" sans schéma (ex. s3.eu-central-003.backblazeb2.com) —
+      // ajouter https:// tout seul si l'utilisateur colle la valeur telle quelle.
+      endpointInput.addEventListener("blur", function (e) {
+        var v = e.target.value.trim();
+        if (v && !/^https?:\/\//i.test(v)) {
+          state.storage.endpoint = "https://" + v;
+          saveState();
+          render();
+        }
+      });
+    }
     card.appendChild(textInput("Clé d'accès (keyID)", state.storage.key, function (v) { state.storage.key = v; }, { field: "storage-key" }));
     card.appendChild(textInput("Clé secrète (applicationKey)", state.storage.secret, function (v) { state.storage.secret = v; }, { password: true, field: "storage-secret" }));
     card.appendChild(stepActions(2, STEPS[2].done()));
