@@ -48,16 +48,24 @@ Sans rien installer sur ta machine, `render.yaml` décrit un déploiement gratui
 [Render](https://render.com). Comme le tier gratuit de Render supprime sa
 base Postgres après 30 jours (+ 14 de grâce) et ne permet pas de disque persistant pour
 MinIO, la base de données et le stockage de documents restent **externes à Render**,
-sur deux autres services gratuits :
+sur deux autres services gratuits — **3 comptes gratuits à créer avant de commencer**
+(email suffit, aucune carte bancaire requise) :
 
-1. **Base de données** : crée un projet Postgres gratuit sur [Neon](https://neon.tech)
-   (gratuit à vie, sans expiration). Note l'hôte, le nom de la base, l'utilisateur et le
-   mot de passe depuis son tableau de bord.
-2. **Stockage des documents** : crée un bucket sur [Cloudflare R2](https://developers.cloudflare.com/r2/)
-   (10 Go gratuits à vie, compatible S3 — le code parle déjà ce protocole via le SDK
-   MinIO, aucune modification de code nécessaire). Note l'endpoint S3
+- [render.com](https://render.com) — de préférence en se connectant avec un compte GitHub.
+- [neon.tech](https://neon.tech)
+- [dash.cloudflare.com](https://dash.cloudflare.com) (compte Cloudflare classique, la
+  section R2 s'utilise depuis ce même tableau de bord)
+
+Une fois les 3 comptes créés :
+
+1. **Base de données** : sur Neon, crée un projet Postgres (nom libre). Note l'hôte, le
+   nom de la base, l'utilisateur et le mot de passe depuis son tableau de bord.
+2. **Stockage des documents** : sur Cloudflare, section R2, crée un bucket (nom libre),
+   puis un jeton d'API avec accès lecture/écriture sur ce bucket (10 Go gratuits à vie,
+   compatible S3 — le code parle déjà ce protocole via le SDK MinIO, aucune modification
+   de code nécessaire). Note l'endpoint S3 affiché
    (`https://<account-id>.r2.cloudflarestorage.com`), la clé d'accès et la clé secrète
-   d'un jeton d'API R2.
+   du jeton.
    > Non testé de bout en bout par manque d'accès à un vrai compte Cloudflare — signale
    > tout souci de compatibilité si tu rencontres une erreur au premier upload.
 3. **Déploiement** : clique le bouton « Deploy to Render » ci-dessus (connexion à Render
