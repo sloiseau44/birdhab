@@ -14,7 +14,15 @@ server {
     # en Docker Compose local, l'URL publique Render (https://...) en déploiement Render.
     location /api/ {
         proxy_pass ${GATEWAY_URL}/;
-        proxy_set_header Host $host;
+        # Nécessaire uniquement quand GATEWAY_URL est en https:// (déploiement Render) : Nginx
+        # n'envoie pas le SNI par défaut vers un amont HTTPS, or Render héberge de nombreux
+        # services derrière des IP partagées, différenciés par le SNI — sans lui, la poignée
+        # de main TLS échoue ("handshake failure"). Un simple no-op en Docker Compose local
+        # (amont en http://, pas de TLS).
+        proxy_ssl_server_name on;
+        # $proxy_host (nom d'hôte de GATEWAY_URL), pas $host (nom d'hôte de la requête entrante
+        # côté frontend) : la Gateway est un hôte externe différent, pas un simple alias interne.
+        proxy_set_header Host $proxy_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
