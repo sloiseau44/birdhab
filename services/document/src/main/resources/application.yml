@@ -6,6 +6,11 @@ spring:
     url: jdbc:postgresql://localhost:5432/birdhab
     username: birdhab
     password: birdhab
+    hikari:
+      # Neon suspend son instance après quelques minutes d'inactivité et ferme les
+      # connexions existantes — voir le commentaire détaillé dans auth/application.yml.
+      max-lifetime: 180000       # 3 min, sous le délai de suspension Neon
+      maximum-pool-size: 5       # usage faible volume (self-hosted)
 
   jpa:
     hibernate:

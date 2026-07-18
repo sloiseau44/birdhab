@@ -6,6 +6,17 @@ spring:
     url: jdbc:postgresql://localhost:5432/birdhab
     username: birdhab
     password: birdhab
+    hikari:
+      # Neon (Postgres serverless) suspend son instance de calcul après quelques minutes
+      # d'inactivité et ferme les connexions TCP existantes sans prévenir le pool. Avec les
+      # valeurs par défaut d'Hikari (max-lifetime 30 min), une connexion peut rester dans le
+      # pool bien après que Neon l'ait fermée côté serveur — la première requête après une
+      # période d'inactivité tombe alors sur des connexions mortes ("this connection has
+      # been closed" en boucle dans les logs), ce qui peut faire échouer la requête plutôt
+      # que d'attendre une reconnexion propre. max-lifetime plus court que le délai de
+      # suspension Neon force Hikari à recycler les connexions avant que Neon ne le fasse.
+      max-lifetime: 180000       # 3 min
+      maximum-pool-size: 5       # usage faible volume (self-hosted) : pas besoin du pool par défaut (10)
 
   jpa:
     hibernate:
