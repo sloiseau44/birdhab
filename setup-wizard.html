@@ -301,7 +301,7 @@
   <div id="steps"></div>
 
   <footer class="note">
-    Basé sur <code>render.yaml</code> du dépôt Birdhab. Un champ ne correspond pas à ce que tu vois sur Render/Neon/Cloudflare ? Ouvre une issue sur le repo.
+    Basé sur <code>render.yaml</code> du dépôt Birdhab. Un champ ne correspond pas à ce que tu vois sur Render/Neon/Backblaze ? Ouvre une issue sur le repo.
   </footer>
 </main>
 
@@ -314,7 +314,7 @@
     step: 1,
     accountsDone: false,
     neon: { host: "", db: "", user: "", pass: "" },
-    r2: { accountId: "", endpoint: "", key: "", secret: "" },
+    storage: { endpoint: "", key: "", secret: "" },
     jwt: "",
     urls: { auth: "", property: "", tenant: "", lease: "", payment: "", document: "" },
     gatewayUrl: "",
@@ -417,7 +417,7 @@
   var STEPS = [
     { key: "accounts", title: "Créer les 3 comptes gratuits", build: buildAccounts, done: function () { return state.accountsDone; } },
     { key: "neon", title: "Base de données (Neon)", build: buildNeon, done: function () { return !!(state.neon.host && state.neon.db && state.neon.user && state.neon.pass); } },
-    { key: "r2", title: "Stockage des documents (Cloudflare R2)", build: buildR2, done: function () { return !!(state.r2.endpoint && state.r2.key && state.r2.secret); } },
+    { key: "storage", title: "Stockage des documents (Backblaze B2)", build: buildStorage, done: function () { return !!(state.storage.endpoint && state.storage.key && state.storage.secret); } },
     { key: "jwt", title: "Secret de connexion (JWT)", build: buildJwt, done: function () { return !!state.jwt; } },
     { key: "deploy", title: "Récapitulatif et déploiement", build: buildDeploy, done: function () { return state.deployClicked; } },
     { key: "urls", title: "Relier la Gateway et le frontend", build: buildUrls, done: function () { return !!state.gatewayUrl; } },
@@ -430,7 +430,7 @@
     var links = el("div", { class: "link-row" }, [
       el("a", { class: "btn", href: "https://render.com", target: "_blank", rel: "noopener", text: "Créer un compte Render ↗" }),
       el("a", { class: "btn", href: "https://neon.tech", target: "_blank", rel: "noopener", text: "Créer un compte Neon ↗" }),
-      el("a", { class: "btn", href: "https://dash.cloudflare.com/sign-up", target: "_blank", rel: "noopener", text: "Créer un compte Cloudflare ↗" })
+      el("a", { class: "btn", href: "https://www.backblaze.com/sign-up/cloud-storage", target: "_blank", rel: "noopener", text: "Créer un compte Backblaze ↗" })
     ]);
     card.appendChild(links);
     var actions = el("div", { class: "actions" });
@@ -481,23 +481,19 @@
     card.appendChild(stepActions(1, STEPS[1].done()));
   }
 
-  function buildR2(card) {
-    card.appendChild(el("h2", { text: "3. Stockage des documents (Cloudflare R2)" }));
-    card.appendChild(el("div", { class: "callout warn", text: "Non testé de bout en bout par manque d'accès à un vrai compte Cloudflare — signale toute erreur au premier upload de document une fois l'app en ligne." }));
+  function buildStorage(card) {
+    card.appendChild(el("h2", { text: "3. Stockage des documents (Backblaze B2)" }));
+    card.appendChild(el("div", { class: "callout warn", text: "Non testé de bout en bout par manque d'accès à un vrai compte Backblaze — signale toute erreur au premier upload de document une fois l'app en ligne." }));
     card.appendChild(el("p", { class: "hint", html:
-      "1. Sur Cloudflare : <strong>R2 object storage</strong> → crée un bucket (nom libre).<br>" +
-      "2. Toujours dans R2 : <strong>Account Details</strong> → <strong>Manage</strong> (à côté de <strong>API Tokens</strong>) → crée un jeton avec lecture/écriture sur ce bucket. " +
-      "Note tout de suite la <strong>clé secrète</strong> affichée : Cloudflare ne la remontrera plus jamais ensuite.<br>" +
-      "3. L'endpoint n'est <u>pas</u> donné avec le jeton : il se construit à partir de ton <strong>Account ID</strong>, trouvable sur cette même page R2 (« Account Details »), ou sur « Workers &amp; Pages » (bloc « Account details »), ou depuis la page d'accueil du compte (menu ⋯ → « Copy account ID »)."
+      "1. Sur Backblaze : <strong>B2 Cloud Storage → Buckets → Create a Bucket</strong> (nom libre). " +
+      "L'endpoint S3 du bucket s'affiche directement sur sa page une fois créé — copie-le ci-dessous.<br>" +
+      "2. <strong>B2 Cloud Storage → Application Keys → Add a New Application Key</strong>, en lui donnant accès " +
+      "(lecture/écriture) à ce bucket. Note tout de suite la clé (<code>applicationKey</code>) affichée : " +
+      "Backblaze ne la remontrera plus jamais ensuite."
     }));
-    card.appendChild(textInput("Account ID", state.r2.accountId, function (v) {
-      state.r2.accountId = v;
-      state.r2.endpoint = v.trim() ? "https://" + v.trim() + ".r2.cloudflarestorage.com" : "";
-    }, { placeholder: "a1b2c3d4e5f6...", field: "r2-account-id" }));
-    if (state.r2.endpoint) card.appendChild(field("Endpoint S3 (généré)", state.r2.endpoint));
-    card.appendChild(el("p", { class: "hint", text: "Bucket dans une juridiction EU ou FedRAMP ? Corrige l'endpoint généré ci-dessus à la main (.eu. ou .fedramp. avant .r2.cloudflarestorage.com)." }));
-    card.appendChild(textInput("Clé d'accès (Access Key ID)", state.r2.key, function (v) { state.r2.key = v; }, { field: "r2-key" }));
-    card.appendChild(textInput("Clé secrète (Secret Access Key)", state.r2.secret, function (v) { state.r2.secret = v; }, { password: true, field: "r2-secret" }));
+    card.appendChild(textInput("Endpoint S3 (affiché sur la page du bucket)", state.storage.endpoint, function (v) { state.storage.endpoint = v; }, { placeholder: "https://s3.eu-central-003.backblazeb2.com", field: "storage-endpoint" }));
+    card.appendChild(textInput("Clé d'accès (keyID)", state.storage.key, function (v) { state.storage.key = v; }, { field: "storage-key" }));
+    card.appendChild(textInput("Clé secrète (applicationKey)", state.storage.secret, function (v) { state.storage.secret = v; }, { password: true, field: "storage-secret" }));
     card.appendChild(stepActions(2, STEPS[2].done()));
   }
 
@@ -529,9 +525,9 @@
       fs.appendChild(field("SPRING_DATASOURCE_PASSWORD", state.neon.pass));
       fs.appendChild(field("JWT_SECRET", state.jwt));
       if (svc === "document") {
-        fs.appendChild(field("MINIO_ENDPOINT", state.r2.endpoint));
-        fs.appendChild(field("MINIO_ACCESS_KEY", state.r2.key));
-        fs.appendChild(field("MINIO_SECRET_KEY", state.r2.secret));
+        fs.appendChild(field("MINIO_ENDPOINT", state.storage.endpoint));
+        fs.appendChild(field("MINIO_ACCESS_KEY", state.storage.key));
+        fs.appendChild(field("MINIO_SECRET_KEY", state.storage.secret));
       }
       card.appendChild(fs);
     });

@@ -58,8 +58,10 @@ sur deux autres services gratuits — **3 comptes gratuits à créer avant de co
 
 - [render.com](https://render.com) — de préférence en se connectant avec un compte GitHub.
 - [neon.tech](https://neon.tech)
-- [dash.cloudflare.com](https://dash.cloudflare.com) (compte Cloudflare classique, la
-  section R2 s'utilise depuis ce même tableau de bord)
+- [backblaze.com/sign-up/cloud-storage](https://www.backblaze.com/sign-up/cloud-storage)
+  (« No credit card required » — contrairement à Cloudflare R2, écarté après un premier
+  essai réel : R2 demande un moyen de paiement en carte dès l'activation, même pour rester
+  à 0€)
 
 Une fois les 3 comptes créés :
 
@@ -68,16 +70,14 @@ Une fois les 3 comptes créés :
    son tableau de bord, clique **Connect** : la fenêtre affiche une chaîne du type
    `postgresql://utilisateur:motdepasse@hôte/base` — c'est elle qu'il faut noter (les
    4 valeurs sont dedans, Neon ne les affiche pas forcément séparément).
-2. **Stockage des documents** : sur Cloudflare, **R2 object storage** → crée un bucket
-   (nom libre) → **Account Details** → **Manage** (à côté de **API Tokens**) → crée un
-   jeton avec accès lecture/écriture sur ce bucket (10 Go gratuits à vie, compatible S3 —
-   le code parle déjà ce protocole via le SDK MinIO, aucune modification de code
-   nécessaire). Note tout de suite la **clé secrète** affichée : Cloudflare ne la remontre
-   plus jamais ensuite. L'**endpoint S3** n'est pas donné avec le jeton — il se construit
-   à partir de ton **Account ID** (`https://<account-id>.r2.cloudflarestorage.com`),
-   trouvable sur cette même page R2, sur « Workers & Pages » (bloc « Account details »),
-   ou depuis la page d'accueil du compte (menu ⋯ → « Copy account ID »).
-   > Non testé de bout en bout par manque d'accès à un vrai compte Cloudflare — signale
+2. **Stockage des documents** : sur Backblaze, **B2 Cloud Storage → Buckets → Create a
+   Bucket** (nom libre) ; l'**endpoint S3** du bucket est affiché directement sur sa page
+   (10 Go gratuits à vie, compatible S3 — le code parle déjà ce protocole via le SDK
+   MinIO, aucune modification de code nécessaire). Puis **B2 Cloud Storage → Application
+   Keys → Add a New Application Key**, en lui donnant accès (lecture/écriture) à ce
+   bucket. Note tout de suite la clé (`applicationKey`) affichée : Backblaze ne la
+   remontre plus jamais ensuite.
+   > Non testé de bout en bout par manque d'accès à un vrai compte Backblaze — signale
    > tout souci de compatibilité si tu rencontres une erreur au premier upload.
 3. **Déploiement** : clique le bouton « Deploy to Render » ci-dessus (connexion à Render
    requise). Il ouvre directement l'assistant de déploiement avec ce repo pré-rempli ;
@@ -92,7 +92,8 @@ Une fois les 3 comptes créés :
      toi, ex. `openssl rand -base64 32` — **la même valeur sur les 6 services**, sinon la
      validation des jetons échoue entre services).
    - Sur `birdhab-document` en plus : `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`,
-     `MINIO_SECRET_KEY` (depuis Cloudflare R2).
+     `MINIO_SECRET_KEY` (depuis Backblaze B2 — `MINIO_ACCESS_KEY` = `keyID`,
+     `MINIO_SECRET_KEY` = `applicationKey`).
 5. Une fois ces 6 services déployés, Render affiche leur URL publique
    (`https://birdhab-auth.onrender.com`, etc.) dans le tableau de bord. Reporte-les dans
    les variables `AUTH_SERVICE_URL`, `PROPERTY_SERVICE_URL`... de `birdhab-gateway`
@@ -104,9 +105,9 @@ Sur le tier gratuit, chaque service se met en veille après 15 minutes sans traf
 (réveil en ~1 minute à la requête suivante) — sans coût, mais avec ce délai occasionnel.
 
 > Cette configuration a été vérifiée service par service contre la documentation
-> officielle de Render (syntaxe `render.yaml`, limites du tier gratuit), mais pas
-> déployée de bout en bout faute de compte Render/Neon/Cloudflare disponible pour le
-> faire. Si une étape ne se passe pas comme décrit, partage l'erreur pour qu'on l'ajuste.
+> officielle de Render/Neon/Backblaze (syntaxe `render.yaml`, limites des tiers gratuits),
+> mais pas déployée de bout en bout faute de comptes disponibles pour le faire. Si une
+> étape ne se passe pas comme décrit, partage l'erreur pour qu'on l'ajuste.
 
 ## Stack technique
 
