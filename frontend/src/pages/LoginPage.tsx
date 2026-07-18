@@ -7,6 +7,7 @@ import { Card } from '../components/ui/Card'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
 import { extractErrorMessage, isRateLimited } from '../lib/errors'
 import { useCooldown } from '../lib/useCooldown'
+import { useBackendWarmup } from '../lib/useBackendWarmup'
 
 const WAKE_UP_COOLDOWN_SECONDS = 60
 
@@ -19,6 +20,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { secondsLeft, start } = useCooldown()
+  const { isWarmingUp } = useBackendWarmup()
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -68,8 +70,14 @@ export function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button type="submit" disabled={isSubmitting || secondsLeft > 0} className="mt-2">
-            {isSubmitting ? 'Connexion…' : secondsLeft > 0 ? `Réessaie dans ${secondsLeft}s` : 'Se connecter'}
+          <Button type="submit" disabled={isSubmitting || secondsLeft > 0 || isWarmingUp} className="mt-2">
+            {isSubmitting
+              ? 'Connexion…'
+              : secondsLeft > 0
+                ? `Réessaie dans ${secondsLeft}s`
+                : isWarmingUp
+                  ? 'Préparation du service…'
+                  : 'Se connecter'}
           </Button>
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">

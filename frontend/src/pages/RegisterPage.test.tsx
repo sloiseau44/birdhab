@@ -18,10 +18,15 @@ function renderRegisterPage() {
 }
 
 async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
+  // Le bouton démarre désactivé ("Préparation du service…") tant que useBackendWarmup n'a
+  // pas confirmé que la chaîne frontend -> gateway -> auth répond — voir warmupHandler.
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Créer mon compte' })).toBeInTheDocument())
   await user.type(screen.getByLabelText('Email'), 'a@a.com')
   await user.type(screen.getByLabelText('Mot de passe'), 'secret123')
   await user.click(screen.getByRole('button', { name: 'Créer mon compte' }))
 }
+
+const warmupHandler = http.get('/api/auth/me', () => new HttpResponse(null, { status: 401 }))
 
 describe('RegisterPage', () => {
   beforeEach(() => {
@@ -35,6 +40,7 @@ describe('RegisterPage', () => {
   it('affiche le message générique sur un échec classique (pas de compte à rebours)', async () => {
     const user = userEvent.setup()
     server.use(
+      warmupHandler,
       http.post('/api/auth/register', () =>
         HttpResponse.json({ message: 'Email déjà utilisé' }, { status: 409 }),
       ),
@@ -50,7 +56,7 @@ describe('RegisterPage', () => {
   it('sur une 429 (service Render endormi), bloque le bouton avec un compte à rebours plutôt qu\'un message d\'échec', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup()
-    server.use(http.post('/api/auth/register', () => new HttpResponse(null, { status: 429 })))
+    server.use(warmupHandler, http.post('/api/auth/register', () => new HttpResponse(null, { status: 429 })))
 
     renderRegisterPage()
     await fillAndSubmit(user)
@@ -65,5 +71,16 @@ describe('RegisterPage', () => {
 
     act(() => vi.advanceTimersByTime(10000))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('réessaie dans 50s'))
+  })
+
+  it('affiche le bouton bloqué en "Préparation du service…" le temps du réveil silencieux (useBackendWarmup), puis le débloque', async () => {
+    server.use(warmupHandler)
+
+    renderRegisterPage()
+
+    expect(screen.getByRole('button', { name: 'Préparation du service…' })).toBeDisabled()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Créer mon compte' })).not.toBeDisabled(),
+    )
   })
 })

@@ -18,10 +18,15 @@ function renderLoginPage() {
 }
 
 async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
+  // Le bouton démarre désactivé ("Préparation du service…") tant que useBackendWarmup n'a
+  // pas confirmé que la chaîne frontend -> gateway -> auth répond — voir warmupHandler.
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Se connecter' })).toBeInTheDocument())
   await user.type(screen.getByLabelText('Email'), 'a@a.com')
   await user.type(screen.getByLabelText('Mot de passe'), 'secret123')
   await user.click(screen.getByRole('button', { name: 'Se connecter' }))
 }
+
+const warmupHandler = http.get('/api/auth/me', () => new HttpResponse(null, { status: 401 }))
 
 describe('LoginPage', () => {
   beforeEach(() => {
@@ -34,7 +39,7 @@ describe('LoginPage', () => {
 
   it("affiche le message d'identifiants incorrects sur une 401 classique (pas de compte à rebours)", async () => {
     const user = userEvent.setup()
-    server.use(http.post('/api/auth/login', () => new HttpResponse(null, { status: 401 })))
+    server.use(warmupHandler, http.post('/api/auth/login', () => new HttpResponse(null, { status: 401 })))
 
     renderLoginPage()
     await fillAndSubmit(user)
@@ -48,7 +53,7 @@ describe('LoginPage', () => {
   it('sur une 429 (service Render endormi), bloque le bouton avec un compte à rebours plutôt qu\'un message d\'échec', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup()
-    server.use(http.post('/api/auth/login', () => new HttpResponse(null, { status: 429 })))
+    server.use(warmupHandler, http.post('/api/auth/login', () => new HttpResponse(null, { status: 429 })))
 
     renderLoginPage()
     await fillAndSubmit(user)
@@ -63,5 +68,16 @@ describe('LoginPage', () => {
 
     act(() => vi.advanceTimersByTime(3000))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('réessaie dans 57s'))
+  })
+
+  it('affiche le bouton bloqué en "Préparation du service…" le temps du réveil silencieux (useBackendWarmup), puis le débloque', async () => {
+    server.use(warmupHandler)
+
+    renderLoginPage()
+
+    expect(screen.getByRole('button', { name: 'Préparation du service…' })).toBeDisabled()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Se connecter' })).not.toBeDisabled(),
+    )
   })
 })
