@@ -239,6 +239,7 @@
     overflow-x: auto;
     white-space: nowrap;
     flex: 1;
+    min-width: 0; /* sans ça, un enfant flex ne se contracte jamais sous sa largeur de contenu : overflow-x: auto ne se déclenche jamais et la valeur déborde de la carte au lieu de scroller dedans */
   }
   .field .copy {
     flex-shrink: 0;
@@ -260,6 +261,9 @@
     border-radius: 10px;
     padding: 0.9rem 1rem 1rem;
     margin: 0 0 1rem;
+    min-width: 0; /* un <fieldset> a une largeur minimale implicite basée sur son contenu dans la
+                     plupart des moteurs (comme un enfant flex) : sans ce reset, il peut dépasser
+                     de la carte même si ses enfants ont déjà overflow-x/min-width corrects */
   }
   fieldset legend {
     font-size: 0.78rem;
