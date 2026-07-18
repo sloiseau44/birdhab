@@ -104,7 +104,8 @@ Une fois les 3 comptes créés :
      validation des jetons échoue entre services).
    - Sur `birdhab-document` en plus : `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`,
      `MINIO_SECRET_KEY` (depuis Backblaze B2 — `MINIO_ACCESS_KEY` = `keyID`,
-     `MINIO_SECRET_KEY` = `applicationKey`).
+     `MINIO_SECRET_KEY` = `applicationKey`) et `MINIO_BUCKET` = **le nom exact du bucket
+     créé à l'étape 2** (l'appli ne devine jamais ce nom, elle utilise celui donné ici).
    - Sur `birdhab-gateway` (`AUTH_SERVICE_URL`, `PROPERTY_SERVICE_URL`...) et
      `birdhab-frontend` (`GATEWAY_URL`) : Render demande ces valeurs dans le même
      formulaire, mais elles ne peuvent pas encore être connues à ce stade (ce sont les

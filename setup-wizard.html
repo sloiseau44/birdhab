@@ -318,7 +318,7 @@
     step: 1,
     accountsDone: false,
     neon: { host: "", db: "", user: "", pass: "" },
-    storage: { endpoint: "", key: "", secret: "" },
+    storage: { endpoint: "", key: "", secret: "", bucket: "" },
     jwt: "",
     urls: { auth: "", property: "", tenant: "", lease: "", payment: "", document: "" },
     gatewayUrl: ""
@@ -424,7 +424,7 @@
   var STEPS = [
     { key: "accounts", title: "Créer les 3 comptes gratuits", build: buildAccounts, done: function () { return state.accountsDone; } },
     { key: "neon", title: "Base de données (Neon)", build: buildNeon, done: function () { return !!(state.neon.host && state.neon.db && state.neon.user && state.neon.pass); } },
-    { key: "storage", title: "Stockage des documents (Backblaze B2)", build: buildStorage, done: function () { return !!(state.storage.endpoint && state.storage.key && state.storage.secret); } },
+    { key: "storage", title: "Stockage des documents (Backblaze B2)", build: buildStorage, done: function () { return !!(state.storage.endpoint && state.storage.key && state.storage.secret && state.storage.bucket); } },
     { key: "jwt", title: "Secret de connexion (JWT)", build: buildJwt, done: function () { return !!state.jwt; } },
     { key: "deploy", title: "Récapitulatif et déploiement", build: buildDeploy, done: hasRequiredDeployInfo },
     { key: "urls", title: "Relier la Gateway et le frontend", build: buildUrls, done: function () { return !!state.gatewayUrl; } },
@@ -502,6 +502,8 @@
       "(lecture/écriture) à ce bucket. Note tout de suite la clé (<code>applicationKey</code>) affichée : " +
       "Backblaze ne la remontrera plus jamais ensuite."
     }));
+    card.appendChild(textInput("Nom du bucket (exactement comme créé ci-dessus)", state.storage.bucket, function (v) { state.storage.bucket = v; }, { placeholder: "birdhab", field: "storage-bucket" }));
+    card.appendChild(el("p", { class: "hint", text: "L'appli ne devine jamais ce nom : elle utilise exactement celui donné ici, via la variable MINIO_BUCKET." }));
     card.appendChild(textInput("Endpoint S3 (affiché sur la page du bucket)", state.storage.endpoint, function (v) { state.storage.endpoint = v; }, { placeholder: "https://s3.eu-central-003.backblazeb2.com", field: "storage-endpoint" }));
     var endpointInput = card.querySelector('[data-field="storage-endpoint"]');
     if (endpointInput) {
@@ -552,6 +554,7 @@
         fs.appendChild(field("MINIO_ENDPOINT", state.storage.endpoint));
         fs.appendChild(field("MINIO_ACCESS_KEY", state.storage.key));
         fs.appendChild(field("MINIO_SECRET_KEY", state.storage.secret));
+        fs.appendChild(field("MINIO_BUCKET", state.storage.bucket));
       }
       card.appendChild(fs);
     });

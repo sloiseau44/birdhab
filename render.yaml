@@ -112,6 +112,8 @@ services:
         sync: false
       - key: MINIO_SECRET_KEY
         sync: false
+      - key: MINIO_BUCKET
+        sync: false
 
   # Pas de JWT_SECRET ici : la Gateway route sans jamais valider ni transmettre l'identité
   # (voir décision "gateway : routage HTTP pur" dans CLAUDE.md).
