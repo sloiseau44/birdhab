@@ -44,6 +44,11 @@ pas lancer les deux en même temps, ils utilisent les mêmes noms de conteneurs.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/sloiseau44/birdhab)
 
+> **Assistant interactif** : [`setup-wizard.html`](./setup-wizard.html) guide ces
+> étapes une par une et prépare toutes les valeurs à copier-coller — télécharge le
+> fichier et ouvre-le dans ton navigateur (aucune installation, ne se connecte à rien).
+> Rien n'oblige à l'utiliser, les instructions ci-dessous suffisent aussi.
+
 Sans rien installer sur ta machine, `render.yaml` décrit un déploiement gratuit sur
 [Render](https://render.com). Comme le tier gratuit de Render supprime sa
 base Postgres après 30 jours (+ 14 de grâce) et ne permet pas de disque persistant pour

@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Birdhab — Assistant de déploiement Render</title>
+<style>
+  :root {
+    --accent: #059669;
+    --accent-strong: #047857;
+    --accent-wash: #ecfdf5;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --ink: #0f172a;
+    --ink-muted: #64748b;
+    --border: #e2e8f0;
+    --warn: #d97706;
+    --warn-wash: #fffbeb;
+    --danger: #dc2626;
+    --danger-wash: #fef2f2;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --ink: #f1f5f9;
+    --ink-muted: #94a3b8;
+    --border: #334155;
+    --accent-wash: #052e22;
+    --warn-wash: #2a1c04;
+    --danger-wash: #2a0f0f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --ink: #f1f5f9;
+      --ink-muted: #94a3b8;
+      --border: #334155;
+      --accent-wash: #052e22;
+      --warn-wash: #2a1c04;
+      --danger-wash: #2a0f0f;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--ink);
+    margin: 0;
+    padding: 2.5rem 1.25rem 6rem;
+    line-height: 1.5;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  header.page-head {
+    margin-bottom: 2rem;
+  }
+  header.page-head h1 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0 0 0.35rem;
+  }
+  header.page-head p {
+    color: var(--ink-muted);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  /* Progress stepper */
+  .stepper {
+    display: flex;
+    gap: 0.4rem;
+    margin: 1.5rem 0 2.25rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+  .stepper .dot {
+    flex: 1;
+    min-width: 2.2rem;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border);
+    transition: background 0.2s ease;
+  }
+  .stepper .dot.done { background: var(--accent); }
+  .stepper .dot.active { background: var(--accent-strong); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card.collapsed {
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+  }
+  .card.collapsed:hover { border-color: var(--accent); }
+
+  .step-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 0.5rem;
+  }
+  .step-eyebrow .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 50%;
+    background: var(--accent-wash);
+    color: var(--accent-strong);
+    font-size: 0.72rem;
+  }
+  .card.collapsed .step-eyebrow .num.check {
+    background: var(--accent);
+    color: white;
+  }
+
+  h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    text-wrap: balance;
+  }
+  .card.collapsed h2 { margin: 0; font-size: 1rem; display: inline; }
+
+  p.hint {
+    color: var(--ink-muted);
+    font-size: 0.9rem;
+    margin: 0 0 1rem;
+  }
+
+  .callout {
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    margin: 0 0 1rem;
+  }
+  .callout.warn { background: var(--warn-wash); color: var(--warn); }
+  .callout.danger { background: var(--danger-wash); color: var(--danger); }
+
+  .link-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .btn.primary:hover { background: var(--accent-strong); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn:focus-visible, input:focus-visible, a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 0.75rem 0 0.3rem;
+  }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 0.75rem;
+  }
+  @media (max-width: 480px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .field {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+  .field .k {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+    letter-spacing: 0.02em;
+    min-width: 11rem;
+    flex-shrink: 0;
+  }
+  .field .v {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    flex: 1;
+  }
+  .field .copy {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-family: inherit;
+  }
+  .field .copy:hover { background: var(--accent-wash); color: var(--accent-strong); }
+  .field .copy.copied { color: var(--accent-strong); }
+
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1rem 1rem;
+    margin: 0 0 1rem;
+  }
+  fieldset legend {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+    padding: 0 0.4rem;
+  }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+
+  footer.note {
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 0.8rem;
+    margin-top: 2rem;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+</style>
+</head>
+<body>
+<main>
+  <header class="page-head">
+    <h1>Déployer Birdhab gratuitement sur le web</h1>
+    <p>7 étapes, ~20 minutes. Cette page ne se connecte à rien d'elle-même : elle t'aide juste à préparer et copier les bonnes valeurs au bon endroit. Rien n'est envoyé nulle part — tout reste dans ton navigateur.</p>
+  </header>
+
+  <div class="stepper" id="stepper"></div>
+  <div id="steps"></div>
+
+  <footer class="note">
+    Basé sur <code>render.yaml</code> du dépôt Birdhab. Un champ ne correspond pas à ce que tu vois sur Render/Neon/Cloudflare ? Ouvre une issue sur le repo.
+  </footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "birdhab-setup-wizard";
+  var state = Object.assign({
+    step: 1,
+    accountsDone: false,
+    neon: { host: "", db: "", user: "", pass: "" },
+    r2: { endpoint: "", key: "", secret: "" },
+    jwt: "",
+    urls: { auth: "", property: "", tenant: "", lease: "", payment: "", document: "" },
+    gatewayUrl: "",
+    deployClicked: false
+  }, loadState());
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      if (k === "html") node.innerHTML = attrs[k];
+      else if (k === "text") node.textContent = attrs[k];
+      else node.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+    return node;
+  }
+
+  function generateSecret() {
+    var bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    var bin = "";
+    bytes.forEach(function (b) { bin += String.fromCharCode(b); });
+    return btoa(bin).replace(/=+$/, "");
+  }
+
+  function copyText(text, btn) {
+    var done = function () {
+      var original = btn.textContent;
+      btn.textContent = "Copié";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = original; btn.classList.remove("copied"); }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text); done(); });
+    } else {
+      fallbackCopy(text);
+      done();
+    }
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  function datasourceUrl() {
+    var host = state.neon.host.trim();
+    var db = state.neon.db.trim();
+    if (!host || !db) return "";
+    return "jdbc:postgresql://" + host + "/" + db + "?sslmode=require";
+  }
+
+  function field(label, value, mono) {
+    var wrap = el("div", { class: "field" });
+    wrap.appendChild(el("span", { class: "k", text: label }));
+    var v = el("span", { class: "v", text: value || "—" });
+    wrap.appendChild(v);
+    var copy = el("button", { class: "copy", type: "button", text: "Copier" });
+    copy.addEventListener("click", function () { if (value) copyText(value, copy); });
+    wrap.appendChild(copy);
+    return wrap;
+  }
+
+  function textInput(labelText, value, onInput, opts) {
+    opts = opts || {};
+    var wrap = document.createDocumentFragment();
+    wrap.appendChild(el("label", { text: labelText, for: opts.id || "" }));
+    var input = el("input", {
+      type: opts.password ? "password" : "text",
+      value: value || "",
+      placeholder: opts.placeholder || "",
+      id: opts.id || "",
+      "data-field": opts.field || ""
+    });
+    // render() reconstruit toutes les cartes à chaque frappe (calculs dérivés : URL
+    // JDBC, bouton "suivant" activé, etc.) — sans restauration explicite du focus/de la
+    // position du curseur ci-dessous, un vrai clavier perdrait le focus à chaque
+    // caractère tapé (un nœud DOM recréé n'est jamais focus par défaut).
+    input.addEventListener("input", function (e) { onInput(e.target.value); render(); saveState(); });
+    wrap.appendChild(input);
+    return wrap;
+  }
+
+  var STEPS = [
+    { key: "accounts", title: "Créer les 3 comptes gratuits", build: buildAccounts, done: function () { return state.accountsDone; } },
+    { key: "neon", title: "Base de données (Neon)", build: buildNeon, done: function () { return !!(state.neon.host && state.neon.db && state.neon.user && state.neon.pass); } },
+    { key: "r2", title: "Stockage des documents (Cloudflare R2)", build: buildR2, done: function () { return !!(state.r2.endpoint && state.r2.key && state.r2.secret); } },
+    { key: "jwt", title: "Secret de connexion (JWT)", build: buildJwt, done: function () { return !!state.jwt; } },
+    { key: "deploy", title: "Récapitulatif et déploiement", build: buildDeploy, done: function () { return state.deployClicked; } },
+    { key: "urls", title: "Relier la Gateway et le frontend", build: buildUrls, done: function () { return !!state.gatewayUrl; } },
+    { key: "done", title: "C'est prêt", build: buildDone, done: function () { return false; } }
+  ];
+
+  function buildAccounts(card) {
+    card.appendChild(el("h2", { text: "1. Créer les 3 comptes gratuits" }));
+    card.appendChild(el("p", { class: "hint", text: "Email suffit, aucune carte bancaire demandée. Ouvre les 3 pages, inscris-toi, puis reviens ici." }));
+    var links = el("div", { class: "link-row" }, [
+      el("a", { class: "btn", href: "https://render.com", target: "_blank", rel: "noopener", text: "Créer un compte Render ↗" }),
+      el("a", { class: "btn", href: "https://neon.tech", target: "_blank", rel: "noopener", text: "Créer un compte Neon ↗" }),
+      el("a", { class: "btn", href: "https://dash.cloudflare.com/sign-up", target: "_blank", rel: "noopener", text: "Créer un compte Cloudflare ↗" })
+    ]);
+    card.appendChild(links);
+    var actions = el("div", { class: "actions" });
+    var next = el("button", { class: "btn primary", type: "button", text: "J'ai créé les 3 comptes →" });
+    next.addEventListener("click", function () { state.accountsDone = true; state.step = 2; saveState(); render(); });
+    actions.appendChild(next);
+    card.appendChild(actions);
+  }
+
+  function buildNeon(card) {
+    card.appendChild(el("h2", { text: "2. Base de données (Neon)" }));
+    card.appendChild(el("p", { class: "hint", html: "Sur Neon, crée un projet Postgres — <strong>version 16</strong> (celle utilisée partout ailleurs dans Birdhab). Puis colle ici l'hôte, le nom de la base, l'utilisateur et le mot de passe affichés dans son tableau de bord (bloc « Connection details »)." }));
+    var grid = el("div", { class: "grid-2" });
+    grid.appendChild(textInput("Hôte", state.neon.host, function (v) { state.neon.host = v; }, { placeholder: "ep-xxxx.eu-central-1.aws.neon.tech", field: "neon-host" }));
+    grid.appendChild(textInput("Nom de la base", state.neon.db, function (v) { state.neon.db = v; }, { placeholder: "neondb", field: "neon-db" }));
+    grid.appendChild(textInput("Utilisateur", state.neon.user, function (v) { state.neon.user = v; }, { placeholder: "birdhab_owner", field: "neon-user" }));
+    grid.appendChild(textInput("Mot de passe", state.neon.pass, function (v) { state.neon.pass = v; }, { password: true, placeholder: "••••••••", field: "neon-pass" }));
+    card.appendChild(grid);
+    if (datasourceUrl()) {
+      card.appendChild(el("label", { text: "URL générée (à réutiliser telle quelle plus bas)" }));
+      card.appendChild(field("SPRING_DATASOURCE_URL", datasourceUrl()));
+    }
+    card.appendChild(stepActions(1, STEPS[1].done()));
+  }
+
+  function buildR2(card) {
+    card.appendChild(el("h2", { text: "3. Stockage des documents (Cloudflare R2)" }));
+    card.appendChild(el("p", { class: "hint", html: "Sur Cloudflare : section <strong>R2</strong> → crée un bucket (nom libre) → <strong>Manage API tokens</strong> → crée un jeton avec lecture/écriture sur ce bucket. Colle ici l'endpoint S3, la clé d'accès et la clé secrète affichés." }));
+    card.appendChild(el("div", { class: "callout warn", text: "Non testé de bout en bout par manque d'accès à un vrai compte Cloudflare — signale toute erreur au premier upload de document une fois l'app en ligne." }));
+    card.appendChild(textInput("Endpoint S3", state.r2.endpoint, function (v) { state.r2.endpoint = v; }, { placeholder: "https://<account-id>.r2.cloudflarestorage.com", field: "r2-endpoint" }));
+    card.appendChild(textInput("Clé d'accès", state.r2.key, function (v) { state.r2.key = v; }, { field: "r2-key" }));
+    card.appendChild(textInput("Clé secrète", state.r2.secret, function (v) { state.r2.secret = v; }, { password: true, field: "r2-secret" }));
+    card.appendChild(stepActions(2, STEPS[2].done()));
+  }
+
+  function buildJwt(card) {
+    card.appendChild(el("h2", { text: "4. Secret de connexion (JWT)" }));
+    card.appendChild(el("p", { class: "hint", text: "Une valeur aléatoire, générée une seule fois ici, à recopier ensuite dans 6 des 8 services sur Render — obligatoire pour qu'ils se reconnaissent entre eux." }));
+    var genBtn = el("button", { class: "btn primary", type: "button", text: state.jwt ? "Regénérer" : "Générer le secret" });
+    genBtn.addEventListener("click", function () { state.jwt = generateSecret(); saveState(); render(); });
+    card.appendChild(genBtn);
+    if (state.jwt) {
+      var wrap = el("div", { style: "margin-top:0.75rem" });
+      wrap.appendChild(field("JWT_SECRET", state.jwt));
+      card.appendChild(wrap);
+    }
+    card.appendChild(stepActions(3, STEPS[3].done()));
+  }
+
+  function buildDeploy(card) {
+    card.appendChild(el("h2", { text: "5. Récapitulatif et déploiement" }));
+    card.appendChild(el("p", { class: "hint", text: "Voici, pour chaque service, exactement quoi coller dans Render au moment où il te le demande. Ouvre le bouton « Deploy to Render » plus bas, garde cette page à côté." }));
+
+    var services = ["auth", "property", "tenant", "lease", "payment", "document"];
+    var labels = { auth: "birdhab-auth", property: "birdhab-property", tenant: "birdhab-tenant", lease: "birdhab-lease", payment: "birdhab-payment", document: "birdhab-document" };
+    services.forEach(function (svc) {
+      var fs = el("fieldset");
+      fs.appendChild(el("legend", { text: labels[svc] }));
+      fs.appendChild(field("SPRING_DATASOURCE_URL", datasourceUrl()));
+      fs.appendChild(field("SPRING_DATASOURCE_USERNAME", state.neon.user));
+      fs.appendChild(field("SPRING_DATASOURCE_PASSWORD", state.neon.pass));
+      fs.appendChild(field("JWT_SECRET", state.jwt));
+      if (svc === "document") {
+        fs.appendChild(field("MINIO_ENDPOINT", state.r2.endpoint));
+        fs.appendChild(field("MINIO_ACCESS_KEY", state.r2.key));
+        fs.appendChild(field("MINIO_SECRET_KEY", state.r2.secret));
+      }
+      card.appendChild(fs);
+    });
+
+    var missing = !datasourceUrl() || !state.neon.user || !state.neon.pass || !state.jwt;
+    if (missing) {
+      card.appendChild(el("div", { class: "callout danger", text: "Il manque des informations des étapes précédentes — remonte compléter les champs vides avant de déployer." }));
+    }
+
+    var deployLink = el("a", {
+      class: "btn primary",
+      href: "https://render.com/deploy?repo=https://github.com/sloiseau44/birdhab",
+      target: "_blank",
+      rel: "noopener",
+      text: "Deploy to Render ↗"
+    });
+    deployLink.addEventListener("click", function () { state.deployClicked = true; saveState(); setTimeout(render, 300); });
+    card.appendChild(el("div", { class: "link-row", style: "margin-top:1rem" }, [deployLink]));
+    card.appendChild(el("p", { class: "hint", text: "Render va créer les 8 services et te demander une valeur pour chaque champ marqué « à renseigner » — utilise le récapitulatif ci-dessus." }));
+    card.appendChild(stepActions(4, state.deployClicked, "J'ai lancé le déploiement →"));
+  }
+
+  function buildUrls(card) {
+    card.appendChild(el("h2", { text: "6. Relier la Gateway et le frontend" }));
+    card.appendChild(el("p", { class: "hint", text: "Une fois les 6 premiers services déployés (statut vert sur Render), ouvre chacun et copie son URL publique en haut de sa page. Colle-les ici." }));
+    var services = [["auth", "birdhab-auth"], ["property", "birdhab-property"], ["tenant", "birdhab-tenant"], ["lease", "birdhab-lease"], ["payment", "birdhab-payment"], ["document", "birdhab-document"]];
+    services.forEach(function (pair) {
+      card.appendChild(textInput("URL de " + pair[1], state.urls[pair[0]], function (v) { state.urls[pair[0]] = v; }, { placeholder: "https://" + pair[1] + "-xxxx.onrender.com", field: "url-" + pair[0] }));
+    });
+
+    var allUrlsFilled = services.every(function (p) { return !!state.urls[p[0]]; });
+    if (allUrlsFilled) {
+      card.appendChild(el("label", { text: "À coller dans birdhab-gateway → Environment" }));
+      var fs = el("fieldset");
+      fs.appendChild(el("legend", { text: "birdhab-gateway" }));
+      fs.appendChild(field("AUTH_SERVICE_URL", state.urls.auth));
+      fs.appendChild(field("PROPERTY_SERVICE_URL", state.urls.property));
+      fs.appendChild(field("TENANT_SERVICE_URL", state.urls.tenant));
+      fs.appendChild(field("LEASE_SERVICE_URL", state.urls.lease));
+      fs.appendChild(field("PAYMENT_SERVICE_URL", state.urls.payment));
+      fs.appendChild(field("DOCUMENT_SERVICE_URL", state.urls.document));
+      card.appendChild(fs);
+      card.appendChild(el("p", { class: "hint", text: "Une fois enregistré, birdhab-gateway redémarre automatiquement. Note son URL publique une fois relancé :" }));
+      card.appendChild(textInput("URL de birdhab-gateway", state.gatewayUrl, function (v) { state.gatewayUrl = v; }, { placeholder: "https://birdhab-gateway-xxxx.onrender.com", field: "gateway-url" }));
+      if (state.gatewayUrl) {
+        card.appendChild(el("label", { text: "À coller dans birdhab-frontend → Environment" }));
+        var fs2 = el("fieldset");
+        fs2.appendChild(el("legend", { text: "birdhab-frontend" }));
+        fs2.appendChild(field("GATEWAY_URL", state.gatewayUrl));
+        card.appendChild(fs2);
+      }
+    }
+    card.appendChild(stepActions(5, STEPS[5].done()));
+  }
+
+  function buildDone(card) {
+    card.appendChild(el("h2", { text: "7. C'est prêt" }));
+    card.appendChild(el("p", { class: "hint", text: "Ouvre l'URL publique de birdhab-frontend (menu du service sur Render) — c'est l'adresse de ton application. Crée un compte et ajoute un premier bien pour vérifier que tout fonctionne." }));
+    card.appendChild(el("div", { class: "callout warn", text: "Premier chargement lent (jusqu'à ~1 minute) : normal, les services gratuits se réveillent après une période d'inactivité." }));
+  }
+
+  function stepActions(index, canProceed, label) {
+    var wrap = el("div", { class: "actions" });
+    var next = el("button", { class: "btn primary", type: "button", text: label || "Étape suivante →" });
+    if (!canProceed) next.setAttribute("disabled", "");
+    next.addEventListener("click", function () { state.step = index + 2; saveState(); render(); });
+    wrap.appendChild(next);
+    return wrap;
+  }
+
+  function captureFocus() {
+    var ae = document.activeElement;
+    var steps = document.getElementById("steps");
+    if (ae && steps && steps.contains(ae) && ae.dataset && ae.dataset.field) {
+      return { field: ae.dataset.field, start: ae.selectionStart, end: ae.selectionEnd };
+    }
+    return null;
+  }
+
+  function restoreFocus(info) {
+    if (!info) return;
+    var target = document.querySelector('[data-field="' + info.field + '"]');
+    if (!target) return;
+    target.focus();
+    if (typeof info.start === "number" && target.setSelectionRange) {
+      try { target.setSelectionRange(info.start, info.end); } catch (e) {}
+    }
+  }
+
+  function render() {
+    // render() reconstruit toutes les cartes (calculs dérivés : URL JDBC, boutons
+    // activés/désactivés, apparition de blocs une fois tous les champs remplis...),
+    // y compris pendant la frappe — capturer/restaurer le focus et la position du
+    // curseur évite qu'un vrai clavier perde le focus à chaque caractère tapé.
+    var focusInfo = captureFocus();
+
+    var stepperEl = document.getElementById("stepper");
+    stepperEl.innerHTML = "";
+    STEPS.forEach(function (s, i) {
+      var dot = el("div", { class: "dot" });
+      if (i + 1 < state.step) dot.classList.add("done");
+      else if (i + 1 === state.step) dot.classList.add("active");
+      stepperEl.appendChild(dot);
+    });
+
+    var container = document.getElementById("steps");
+    container.innerHTML = "";
+    STEPS.forEach(function (s, i) {
+      var stepNum = i + 1;
+      var isActive = stepNum === state.step;
+      var isDone = s.done();
+      var isPast = stepNum < state.step;
+
+      if (!isActive && !(isPast || isDone)) return; // don't render future steps yet
+
+      var card = el("div", { class: "card" + (isActive ? "" : " collapsed") });
+      var eyebrow = el("div", { class: "step-eyebrow" }, [
+        el("span", { class: "num" + (isDone && !isActive ? " check" : ""), text: isDone && !isActive ? "✓" : String(stepNum) }),
+        el("span", { text: "Étape " + stepNum + " / " + STEPS.length })
+      ]);
+      card.appendChild(eyebrow);
+
+      if (isActive) {
+        s.build(card);
+      } else {
+        card.appendChild(el("h2", { text: s.title }));
+        card.addEventListener("click", function () { state.step = stepNum; saveState(); render(); });
+      }
+      container.appendChild(card);
+    });
+
+    restoreFocus(focusInfo);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
