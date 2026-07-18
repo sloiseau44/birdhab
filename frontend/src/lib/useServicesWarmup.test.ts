@@ -25,6 +25,7 @@ describe('useServicesWarmup', () => {
     )
     const { result } = renderHook(() => useServicesWarmup(['/properties', '/tenants']))
     await waitFor(() => expect(result.current.isWarmingUp).toBe(false))
+    expect(result.current.hasTimedOut).toBe(false)
   })
 
   it("reste bloqué tant qu'un seul des services répond encore 502/429, même si les autres sont prêts", async () => {
@@ -49,7 +50,7 @@ describe('useServicesWarmup', () => {
     expect(tenantAttempts).toBeGreaterThanOrEqual(2)
   })
 
-  it('se débloque après le délai maximal même si un service ne répond jamais correctement', async () => {
+  it('se débloque après le délai maximal, avec hasTimedOut, si un service ne répond jamais correctement', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     server.use(
       http.get('/api/properties', () => HttpResponse.json([])),
@@ -57,7 +58,8 @@ describe('useServicesWarmup', () => {
     )
     const { result } = renderHook(() => useServicesWarmup(['/properties', '/tenants']))
 
-    await vi.advanceTimersByTimeAsync(61000)
+    await vi.advanceTimersByTimeAsync(151000)
     await waitFor(() => expect(result.current.isWarmingUp).toBe(false))
+    expect(result.current.hasTimedOut).toBe(true)
   })
 })

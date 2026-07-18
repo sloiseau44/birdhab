@@ -100,6 +100,32 @@ describe('RequireAuth', () => {
     vi.useRealTimers()
   })
 
+  it('affiche un message avec bouton "Réessayer" si un service ne répond jamais dans le délai maximal', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    tokenStorage.setTokens({ accessToken: 'tok', refreshToken: 'ref', expiresIn: 3600 })
+    server.use(
+      http.get('/api/auth/me', () => HttpResponse.json({ id: 'u1', email: 'a@a.com' })),
+      http.get('/api/properties', () => HttpResponse.json([])),
+      http.get('/api/tenants', () => new HttpResponse(null, { status: 502 })),
+      http.get('/api/leases', () => HttpResponse.json([])),
+      http.get('/api/payments', () => HttpResponse.json([])),
+      http.get('/api/documents', () => HttpResponse.json([])),
+    )
+
+    renderAt('/private')
+
+    await vi.advanceTimersByTimeAsync(151000)
+    await waitFor(() =>
+      expect(
+        screen.getByText('Le démarrage des services prend plus de temps que prévu.'),
+      ).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument()
+    expect(screen.queryByText('Secret')).not.toBeInTheDocument()
+
+    vi.useRealTimers()
+  })
+
   it('redirige vers /login si non authentifié', async () => {
     renderAt('/private')
 
