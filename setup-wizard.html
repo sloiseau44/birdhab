@@ -321,8 +321,7 @@
     storage: { endpoint: "", key: "", secret: "" },
     jwt: "",
     urls: { auth: "", property: "", tenant: "", lease: "", payment: "", document: "" },
-    gatewayUrl: "",
-    deployClicked: false
+    gatewayUrl: ""
   }, loadState());
 
   function loadState() {
@@ -387,6 +386,10 @@
     return "jdbc:postgresql://" + host + "/" + db + "?sslmode=require";
   }
 
+  function hasRequiredDeployInfo() {
+    return !!(datasourceUrl() && state.neon.user && state.neon.pass && state.jwt);
+  }
+
   function field(label, value, mono) {
     var wrap = el("div", { class: "field" });
     wrap.appendChild(el("span", { class: "k", text: label }));
@@ -423,7 +426,7 @@
     { key: "neon", title: "Base de données (Neon)", build: buildNeon, done: function () { return !!(state.neon.host && state.neon.db && state.neon.user && state.neon.pass); } },
     { key: "storage", title: "Stockage des documents (Backblaze B2)", build: buildStorage, done: function () { return !!(state.storage.endpoint && state.storage.key && state.storage.secret); } },
     { key: "jwt", title: "Secret de connexion (JWT)", build: buildJwt, done: function () { return !!state.jwt; } },
-    { key: "deploy", title: "Récapitulatif et déploiement", build: buildDeploy, done: function () { return state.deployClicked; } },
+    { key: "deploy", title: "Récapitulatif et déploiement", build: buildDeploy, done: hasRequiredDeployInfo },
     { key: "urls", title: "Relier la Gateway et le frontend", build: buildUrls, done: function () { return !!state.gatewayUrl; } },
     { key: "done", title: "C'est prêt", build: buildDone, done: function () { return false; } }
   ];
@@ -553,7 +556,7 @@
       card.appendChild(fs);
     });
 
-    var missing = !datasourceUrl() || !state.neon.user || !state.neon.pass || !state.jwt;
+    var missing = !hasRequiredDeployInfo();
     if (missing) {
       card.appendChild(el("div", { class: "callout danger", text: "Il manque des informations des étapes précédentes — remonte compléter les champs vides avant de déployer." }));
     }
@@ -575,10 +578,12 @@
       rel: "noopener",
       text: "Deploy to Render ↗"
     });
-    deployLink.addEventListener("click", function () { state.deployClicked = true; saveState(); setTimeout(render, 300); });
     card.appendChild(el("div", { class: "link-row", style: "margin-top:1rem" }, [deployLink]));
     card.appendChild(el("p", { class: "hint", text: "Render va créer les 8 services et te demander une valeur pour chaque champ marqué « à renseigner » — utilise le récapitulatif ci-dessus." }));
-    card.appendChild(stepActions(4, state.deployClicked, "J'ai lancé le déploiement →"));
+    // Le bouton dépend d'avoir les infos nécessaires, pas d'avoir détecté un clic sur le
+    // lien ci-dessus : selon comment le lien est ouvert (ex. clic droit -> nouvel onglet),
+    // l'évènement "click" ne se déclenche pas toujours, ce qui bloquait ce bouton à tort.
+    card.appendChild(stepActions(4, !missing, "J'ai lancé le déploiement →"));
   }
 
   function buildUrls(card) {
