@@ -440,9 +440,34 @@
     card.appendChild(actions);
   }
 
+  function parseConnectionString(str) {
+    var m = (str || "").trim().match(/^postgres(?:ql)?:\/\/([^:\/?#]+):([^@\/?#]+)@([^\/?#]+)\/([^?#]+)/i);
+    if (!m) return null;
+    try {
+      return { user: decodeURIComponent(m[1]), pass: decodeURIComponent(m[2]), host: m[3], db: m[4] };
+    } catch (e) {
+      return { user: m[1], pass: m[2], host: m[3], db: m[4] };
+    }
+  }
+
   function buildNeon(card) {
     card.appendChild(el("h2", { text: "2. Base de données (Neon)" }));
-    card.appendChild(el("p", { class: "hint", html: "Sur Neon, crée un projet Postgres — <strong>version 16</strong> (celle utilisée partout ailleurs dans Birdhab). Puis colle ici l'hôte, le nom de la base, l'utilisateur et le mot de passe affichés dans son tableau de bord (bloc « Connection details »)." }));
+    card.appendChild(el("p", { class: "hint", html: "Sur Neon, crée un projet Postgres — <strong>version 16</strong> (celle utilisée partout ailleurs dans Birdhab). Sur son tableau de bord, clique <strong>Connect</strong> : la fenêtre qui s'ouvre affiche une chaîne du type <code>postgresql://utilisateur:motdepasse@hôte/base</code>." }));
+    card.appendChild(el("label", { text: "Colle ici la chaîne de connexion complète (remplit les champs ci-dessous automatiquement)" }));
+    var connInput = el("input", { type: "text", placeholder: "postgresql://user:password@ep-xxxx.neon.tech/neondb?sslmode=require", "data-field": "neon-connstring" });
+    connInput.addEventListener("input", function (e) {
+      var parsed = parseConnectionString(e.target.value);
+      if (parsed) {
+        state.neon.user = parsed.user;
+        state.neon.pass = parsed.pass;
+        state.neon.host = parsed.host;
+        state.neon.db = parsed.db;
+      }
+      render();
+      saveState();
+    });
+    card.appendChild(connInput);
+    card.appendChild(el("p", { class: "hint", text: "Tu ne trouves qu'une chaîne combinée et pas de champs séparés ? C'est normal, colle-la ci-dessus. Sinon, remplis les 4 champs à la main ci-dessous." }));
     var grid = el("div", { class: "grid-2" });
     grid.appendChild(textInput("Hôte", state.neon.host, function (v) { state.neon.host = v; }, { placeholder: "ep-xxxx.eu-central-1.aws.neon.tech", field: "neon-host" }));
     grid.appendChild(textInput("Nom de la base", state.neon.db, function (v) { state.neon.db = v; }, { placeholder: "neondb", field: "neon-db" }));
