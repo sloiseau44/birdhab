@@ -11,7 +11,13 @@ Développée en architecture microservices avec Java 21 et Spring Boot 3, en ope
 - Servir de vitrine technique (Java 21, Spring Boot 3, microservices, sécurité JWT)
 - Rester 100% open-core : le code est public, aucune infrastructure SaaS à héberger
 
-## Installation rapide (tout-en-un)
+## Installer Birdhab
+
+Deux façons alternatives de lancer l'application, à choisir selon le besoin — pas les
+deux : l'option locale pour l'essayer sur sa machine, l'option Render pour une instance
+accessible en permanence depuis le web (utile si des locataires doivent s'y connecter).
+
+### Option 1 — En local, sur sa machine (tout-en-un)
 
 Pour essayer Birdhab sans installer Java/Node/Maven, une seule commande lance toute la
 stack (infra + 6 microservices + Gateway + frontend) dans Docker :
@@ -34,13 +40,12 @@ Cette commande est indépendante de `docker/docker-compose.yml`, qui ne fournit 
 l'infra pour le développement au quotidien (voir « Démarrer en local » plus bas) — ne
 pas lancer les deux en même temps, ils utilisent les mêmes noms de conteneurs.
 
-## Déploiement gratuit sur le web (Render)
+### Option 2 — Sur le web, en permanence (Render, gratuit)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/sloiseau44/birdhab)
 
-Pour une instance accessible en permanence (utile si des locataires doivent pouvoir se
-connecter), sans rien installer sur ta machine, `render.yaml` décrit un déploiement
-gratuit sur [Render](https://render.com). Comme le tier gratuit de Render supprime sa
+Sans rien installer sur ta machine, `render.yaml` décrit un déploiement gratuit sur
+[Render](https://render.com). Comme le tier gratuit de Render supprime sa
 base Postgres après 30 jours (+ 14 de grâce) et ne permet pas de disque persistant pour
 MinIO, la base de données et le stockage de documents restent **externes à Render**,
 sur deux autres services gratuits :
