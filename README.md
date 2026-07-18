@@ -64,15 +64,19 @@ sur deux autres services gratuits — **3 comptes gratuits à créer avant de co
 Une fois les 3 comptes créés :
 
 1. **Base de données** : sur Neon, crée un projet Postgres (nom libre, version **Postgres
-   16** — celle utilisée partout ailleurs dans le projet, voir `docker-compose.yml`).
-   Note l'hôte, le nom de la base, l'utilisateur et le mot de passe depuis son tableau de
-   bord.
-2. **Stockage des documents** : sur Cloudflare, section R2, crée un bucket (nom libre),
-   puis un jeton d'API avec accès lecture/écriture sur ce bucket (10 Go gratuits à vie,
-   compatible S3 — le code parle déjà ce protocole via le SDK MinIO, aucune modification
-   de code nécessaire). Note l'endpoint S3 affiché
-   (`https://<account-id>.r2.cloudflarestorage.com`), la clé d'accès et la clé secrète
-   du jeton.
+   16** — celle utilisée partout ailleurs dans le projet, voir `docker-compose.yml`). Sur
+   son tableau de bord, clique **Connect** : la fenêtre affiche une chaîne du type
+   `postgresql://utilisateur:motdepasse@hôte/base` — c'est elle qu'il faut noter (les
+   4 valeurs sont dedans, Neon ne les affiche pas forcément séparément).
+2. **Stockage des documents** : sur Cloudflare, **R2 object storage** → crée un bucket
+   (nom libre) → **Account Details** → **Manage** (à côté de **API Tokens**) → crée un
+   jeton avec accès lecture/écriture sur ce bucket (10 Go gratuits à vie, compatible S3 —
+   le code parle déjà ce protocole via le SDK MinIO, aucune modification de code
+   nécessaire). Note tout de suite la **clé secrète** affichée : Cloudflare ne la remontre
+   plus jamais ensuite. L'**endpoint S3** n'est pas donné avec le jeton — il se construit
+   à partir de ton **Account ID** (`https://<account-id>.r2.cloudflarestorage.com`),
+   trouvable sur cette même page R2, sur « Workers & Pages » (bloc « Account details »),
+   ou depuis la page d'accueil du compte (menu ⋯ → « Copy account ID »).
    > Non testé de bout en bout par manque d'accès à un vrai compte Cloudflare — signale
    > tout souci de compatibilité si tu rencontres une erreur au premier upload.
 3. **Déploiement** : clique le bouton « Deploy to Render » ci-dessus (connexion à Render

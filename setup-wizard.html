@@ -314,7 +314,7 @@
     step: 1,
     accountsDone: false,
     neon: { host: "", db: "", user: "", pass: "" },
-    r2: { endpoint: "", key: "", secret: "" },
+    r2: { accountId: "", endpoint: "", key: "", secret: "" },
     jwt: "",
     urls: { auth: "", property: "", tenant: "", lease: "", payment: "", document: "" },
     gatewayUrl: "",
@@ -483,11 +483,21 @@
 
   function buildR2(card) {
     card.appendChild(el("h2", { text: "3. Stockage des documents (Cloudflare R2)" }));
-    card.appendChild(el("p", { class: "hint", html: "Sur Cloudflare : section <strong>R2</strong> → crée un bucket (nom libre) → <strong>Manage API tokens</strong> → crée un jeton avec lecture/écriture sur ce bucket. Colle ici l'endpoint S3, la clé d'accès et la clé secrète affichés." }));
     card.appendChild(el("div", { class: "callout warn", text: "Non testé de bout en bout par manque d'accès à un vrai compte Cloudflare — signale toute erreur au premier upload de document une fois l'app en ligne." }));
-    card.appendChild(textInput("Endpoint S3", state.r2.endpoint, function (v) { state.r2.endpoint = v; }, { placeholder: "https://<account-id>.r2.cloudflarestorage.com", field: "r2-endpoint" }));
-    card.appendChild(textInput("Clé d'accès", state.r2.key, function (v) { state.r2.key = v; }, { field: "r2-key" }));
-    card.appendChild(textInput("Clé secrète", state.r2.secret, function (v) { state.r2.secret = v; }, { password: true, field: "r2-secret" }));
+    card.appendChild(el("p", { class: "hint", html:
+      "1. Sur Cloudflare : <strong>R2 object storage</strong> → crée un bucket (nom libre).<br>" +
+      "2. Toujours dans R2 : <strong>Account Details</strong> → <strong>Manage</strong> (à côté de <strong>API Tokens</strong>) → crée un jeton avec lecture/écriture sur ce bucket. " +
+      "Note tout de suite la <strong>clé secrète</strong> affichée : Cloudflare ne la remontrera plus jamais ensuite.<br>" +
+      "3. L'endpoint n'est <u>pas</u> donné avec le jeton : il se construit à partir de ton <strong>Account ID</strong>, trouvable sur cette même page R2 (« Account Details »), ou sur « Workers &amp; Pages » (bloc « Account details »), ou depuis la page d'accueil du compte (menu ⋯ → « Copy account ID »)."
+    }));
+    card.appendChild(textInput("Account ID", state.r2.accountId, function (v) {
+      state.r2.accountId = v;
+      state.r2.endpoint = v.trim() ? "https://" + v.trim() + ".r2.cloudflarestorage.com" : "";
+    }, { placeholder: "a1b2c3d4e5f6...", field: "r2-account-id" }));
+    if (state.r2.endpoint) card.appendChild(field("Endpoint S3 (généré)", state.r2.endpoint));
+    card.appendChild(el("p", { class: "hint", text: "Bucket dans une juridiction EU ou FedRAMP ? Corrige l'endpoint généré ci-dessus à la main (.eu. ou .fedramp. avant .r2.cloudflarestorage.com)." }));
+    card.appendChild(textInput("Clé d'accès (Access Key ID)", state.r2.key, function (v) { state.r2.key = v; }, { field: "r2-key" }));
+    card.appendChild(textInput("Clé secrète (Secret Access Key)", state.r2.secret, function (v) { state.r2.secret = v; }, { password: true, field: "r2-secret" }));
     card.appendChild(stepActions(2, STEPS[2].done()));
   }
 
