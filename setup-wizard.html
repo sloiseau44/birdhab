@@ -558,6 +558,16 @@
       card.appendChild(el("div", { class: "callout danger", text: "Il manque des informations des étapes précédentes — remonte compléter les champs vides avant de déployer." }));
     }
 
+    card.appendChild(el("div", { class: "callout warn", html:
+      "Render va aussi demander des valeurs pour <strong>birdhab-gateway</strong> " +
+      "(<code>AUTH_SERVICE_URL</code>...) et <strong>birdhab-frontend</strong> " +
+      "(<code>GATEWAY_URL</code>) dans le même formulaire — impossible à connaître " +
+      "maintenant, ce sont les URLs que Render attribuera aux 6 services ci-dessus une " +
+      "fois déployés. Mets une valeur temporaire quelconque (ex. " +
+      "<code>https://placeholder.onrender.com</code>) pour continuer : l'étape suivante " +
+      "explique comment les corriger juste après."
+    }));
+
     var deployLink = el("a", {
       class: "btn primary",
       href: "https://render.com/deploy?repo=https://github.com/sloiseau44/birdhab",

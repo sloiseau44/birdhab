@@ -105,11 +105,20 @@ Une fois les 3 comptes créés :
    - Sur `birdhab-document` en plus : `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`,
      `MINIO_SECRET_KEY` (depuis Backblaze B2 — `MINIO_ACCESS_KEY` = `keyID`,
      `MINIO_SECRET_KEY` = `applicationKey`).
+   - Sur `birdhab-gateway` (`AUTH_SERVICE_URL`, `PROPERTY_SERVICE_URL`...) et
+     `birdhab-frontend` (`GATEWAY_URL`) : Render demande ces valeurs dans le même
+     formulaire, mais elles ne peuvent pas encore être connues à ce stade (ce sont les
+     URLs que Render va attribuer aux 6 autres services une fois déployés, à l'étape
+     suivante). Mets une valeur temporaire quelconque (ex.
+     `https://placeholder.onrender.com`) pour pouvoir continuer — l'étape 5 explique
+     comment les corriger juste après.
 5. Une fois ces 6 services déployés, Render affiche leur URL publique
    (`https://birdhab-auth.onrender.com`, etc.) dans le tableau de bord. Reporte-les dans
    les variables `AUTH_SERVICE_URL`, `PROPERTY_SERVICE_URL`... de `birdhab-gateway`
-   (menu du service → Environment), puis fais de même pour `GATEWAY_URL` sur
-   `birdhab-frontend` avec l'URL de `birdhab-gateway`.
+   (menu du service → Environment, à la place des valeurs temporaires saisies à l'étape
+   précédente), puis fais de même pour `GATEWAY_URL` sur `birdhab-frontend` avec l'URL
+   de `birdhab-gateway`. Chaque modification redéploie automatiquement le service
+   concerné.
 6. Application accessible sur l'URL publique de `birdhab-frontend`.
 
 Sur le tier gratuit, chaque service se met en veille après 15 minutes sans trafic
