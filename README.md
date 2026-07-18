@@ -71,7 +71,16 @@ Une fois les 3 comptes créés :
    `postgresql://utilisateur:motdepasse@hôte/base` — c'est elle qu'il faut noter (les
    4 valeurs sont dedans, Neon ne les affiche pas forcément séparément).
 2. **Stockage des documents** : sur Backblaze, **B2 Cloud Storage → Buckets → Create a
-   Bucket** (nom libre) ; l'**endpoint S3** du bucket est affiché directement sur sa page
+   Bucket** (nom libre — si le nom est déjà pris ailleurs dans le monde, essaie une
+   variante). Dans le formulaire de création :
+   - **Privé** (pas Public) — ce sont des pièces d'identité de locataires.
+   - **Default Encryption : Activer** (SSE-B2) — chiffrement au repos géré par
+     Backblaze, gratuit, transparent pour l'appli.
+   - **Object Lock : Désactiver** — laisser activé empêcherait la suppression des
+     fichiers pendant une période donnée, ce qui casserait la fonction « Supprimer »
+     de Birdhab.
+
+   L'**endpoint S3** du bucket est affiché directement sur sa page une fois créé
    (10 Go gratuits à vie, compatible S3 — le code parle déjà ce protocole via le SDK
    MinIO, aucune modification de code nécessaire). Puis **B2 Cloud Storage → Application
    Keys → Add a New Application Key**, en lui donnant accès (lecture/écriture) à ce
