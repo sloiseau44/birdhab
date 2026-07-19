@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse, delay } from 'msw'
 import { server } from '../test/server'
 import { useBackendWarmup } from './useBackendWarmup'
 
@@ -34,34 +34,29 @@ describe('useBackendWarmup', () => {
     expect(result.current.hasTimedOut).toBe(false)
   })
 
-  it('reste bloqué tant qu\'un seul chemin répond encore 502/429, se débloque dès une vraie réponse', async () => {
+  it('reste en réveil tant que la réponse est en attente, puis se débloque une fois qu\'elle arrive (une seule requête, pas de nouvelle tentative)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    let attempt = 0
     server.use(
       ...businessReadyHandlers,
-      http.get('/api/auth/me', () => {
-        attempt += 1
-        return attempt < 3
-          ? new HttpResponse(null, { status: 502 })
-          : new HttpResponse(null, { status: 401 })
+      http.get('/api/auth/me', async () => {
+        await delay(140000)
+        return new HttpResponse(null, { status: 401 })
       }),
     )
     const { result } = renderHook(() => useBackendWarmup())
 
-    await vi.advanceTimersByTimeAsync(10000)
+    await vi.advanceTimersByTimeAsync(60000)
     expect(result.current.isWarmingUp).toBe(true)
 
-    await vi.advanceTimersByTimeAsync(25000)
+    await vi.advanceTimersByTimeAsync(90000)
     await waitFor(() => expect(result.current.isWarmingUp).toBe(false))
-    expect(attempt).toBeGreaterThanOrEqual(3)
+    expect(result.current.hasTimedOut).toBe(false)
   })
 
-  it('se débloque après le délai maximal, avec hasTimedOut, si un chemin ne répond jamais correctement', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
+  it('bascule sur hasTimedOut dès qu\'un chemin répond 502, sans nouvelle tentative', async () => {
     server.use(...businessReadyHandlers, http.get('/api/auth/me', () => new HttpResponse(null, { status: 502 })))
     const { result } = renderHook(() => useBackendWarmup())
 
-    await vi.advanceTimersByTimeAsync(181000)
     await waitFor(() => expect(result.current.isWarmingUp).toBe(false))
     expect(result.current.hasTimedOut).toBe(true)
   })

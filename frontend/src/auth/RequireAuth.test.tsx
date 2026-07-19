@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { http, HttpResponse } from 'msw'
+import { http, HttpResponse, delay } from 'msw'
 import { server } from '../test/server'
 import { tokenStorage } from '../api/client'
 import { AuthProvider } from './AuthContext'
@@ -66,22 +66,18 @@ describe('RequireAuth', () => {
     await waitFor(() => expect(screen.getByText('Secret')).toBeInTheDocument())
   })
 
-  it('affiche "Réveil des services…" tant que les services métier ne répondent pas encore', async () => {
-    // Avec des handlers qui répondent instantanément, la fenêtre "Réveil des services…" est
-    // trop brève pour qu'un waitFor l'observe de façon fiable (voir useServicesWarmup.test.ts
-    // pour le même besoin) : on fait échouer /tenants une première fois (502) pour créer un
-    // délai observable avant que useServicesWarmup ne le retente.
+  it('affiche "Réveil des services…" tant qu\'une réponse est en attente, puis débloque une fois qu\'elle arrive', async () => {
+    // Une seule requête par chemin, pas de nouvelle tentative (voir useWarmup.ts) : on
+    // simule un service encore endormi via une réponse retardée plutôt qu'un 502 immédiat,
+    // pour observer un état "Réveil des services…" qui dure réellement.
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    let tenantAttempts = 0
     tokenStorage.setTokens({ accessToken: 'tok', refreshToken: 'ref', expiresIn: 3600 })
     server.use(
       http.get('/api/auth/me', () => HttpResponse.json({ id: 'u1', email: 'a@a.com' })),
       http.get('/api/properties', () => HttpResponse.json([])),
-      http.get('/api/tenants', () => {
-        tenantAttempts += 1
-        return tenantAttempts < 2
-          ? new HttpResponse(null, { status: 502 })
-          : HttpResponse.json([])
+      http.get('/api/tenants', async () => {
+        await delay(140000)
+        return HttpResponse.json([])
       }),
       http.get('/api/leases', () => HttpResponse.json([])),
       http.get('/api/payments', () => HttpResponse.json([])),
@@ -93,15 +89,16 @@ describe('RequireAuth', () => {
     await waitFor(() => expect(screen.getByText('Réveil des services…')).toBeInTheDocument())
     expect(screen.queryByText('Secret')).not.toBeInTheDocument()
 
-    await vi.advanceTimersByTimeAsync(17000)
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(screen.getByText('Réveil des services…')).toBeInTheDocument()
+
+    await vi.advanceTimersByTimeAsync(90000)
     await waitFor(() => expect(screen.getByText('Secret')).toBeInTheDocument())
-    expect(tenantAttempts).toBeGreaterThanOrEqual(2)
 
     vi.useRealTimers()
   })
 
-  it('affiche un message avec bouton "Réessayer" si un service ne répond jamais dans le délai maximal', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
+  it('affiche un message avec bouton "Réessayer" si un service répond 502 (une seule requête, pas de nouvelle tentative)', async () => {
     tokenStorage.setTokens({ accessToken: 'tok', refreshToken: 'ref', expiresIn: 3600 })
     server.use(
       http.get('/api/auth/me', () => HttpResponse.json({ id: 'u1', email: 'a@a.com' })),
@@ -114,7 +111,6 @@ describe('RequireAuth', () => {
 
     renderAt('/private')
 
-    await vi.advanceTimersByTimeAsync(181000)
     await waitFor(() =>
       expect(
         screen.getByText('Le démarrage des services prend plus de temps que prévu.'),
@@ -122,8 +118,6 @@ describe('RequireAuth', () => {
     )
     expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument()
     expect(screen.queryByText('Secret')).not.toBeInTheDocument()
-
-    vi.useRealTimers()
   })
 
   it('redirige vers /login si non authentifié', async () => {
