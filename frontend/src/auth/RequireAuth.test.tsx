@@ -93,7 +93,7 @@ describe('RequireAuth', () => {
     await waitFor(() => expect(screen.getByText('Réveil des services…')).toBeInTheDocument())
     expect(screen.queryByText('Secret')).not.toBeInTheDocument()
 
-    await vi.advanceTimersByTimeAsync(4000)
+    await vi.advanceTimersByTimeAsync(17000)
     await waitFor(() => expect(screen.getByText('Secret')).toBeInTheDocument())
     expect(tenantAttempts).toBeGreaterThanOrEqual(2)
 

@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import { isServiceUnavailable } from './errors'
 
-const RETRY_DELAY_MS = 4000
+// Un intervalle de 4s (retenté sur 5-6 chemins en parallèle) s'est révélé contre-productif
+// en usage réel : une seule visite directe d'un service endormi le réveillait de façon
+// fiable, mais nos tentatives automatiques répétées ne finissaient jamais par aboutir,
+// même après plusieurs minutes. Hypothèse la plus probable : ce rythme entretient la
+// protection anti-abus de Render (429 "hibernate-rate-limited") en continu au lieu de le
+// laisser se dissiper le temps que le service termine son démarrage. Un intervalle plus
+// espacé laisse le réveil se dérouler sans concurrence de notre propre boucle de retry.
+const RETRY_DELAY_MS = 15000
 // Un service Spring Boot (JVM) cold-starte jusqu'à ~2-3 min sur le tier gratuit Render
 // (observé en usage réel : "Started AuthServiceApplication in 119.901 seconds"), et une
 // chaîne à plusieurs sauts (ex. Gateway -> auth) peut cumuler ces délais plutôt que les

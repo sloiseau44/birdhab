@@ -42,10 +42,10 @@ describe('useServicesWarmup', () => {
     )
     const { result } = renderHook(() => useServicesWarmup(['/properties', '/tenants']))
 
-    await vi.advanceTimersByTimeAsync(1000)
+    await vi.advanceTimersByTimeAsync(1500)
     expect(result.current.isWarmingUp).toBe(true) // properties seul répond, tenants pas encore
 
-    await vi.advanceTimersByTimeAsync(4000)
+    await vi.advanceTimersByTimeAsync(16000)
     await waitFor(() => expect(result.current.isWarmingUp).toBe(false))
     expect(tenantAttempts).toBeGreaterThanOrEqual(2)
   })

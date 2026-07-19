@@ -48,10 +48,10 @@ describe('useBackendWarmup', () => {
     )
     const { result } = renderHook(() => useBackendWarmup())
 
-    await vi.advanceTimersByTimeAsync(4000)
+    await vi.advanceTimersByTimeAsync(10000)
     expect(result.current.isWarmingUp).toBe(true)
 
-    await vi.advanceTimersByTimeAsync(4000)
+    await vi.advanceTimersByTimeAsync(25000)
     await waitFor(() => expect(result.current.isWarmingUp).toBe(false))
     expect(attempt).toBeGreaterThanOrEqual(3)
   })
