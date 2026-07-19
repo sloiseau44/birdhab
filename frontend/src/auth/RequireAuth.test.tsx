@@ -114,7 +114,7 @@ describe('RequireAuth', () => {
 
     renderAt('/private')
 
-    await vi.advanceTimersByTimeAsync(151000)
+    await vi.advanceTimersByTimeAsync(181000)
     await waitFor(() =>
       expect(
         screen.getByText('Le démarrage des services prend plus de temps que prévu.'),

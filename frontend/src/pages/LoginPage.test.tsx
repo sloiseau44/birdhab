@@ -19,14 +19,23 @@ function renderLoginPage() {
 
 async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
   // Le bouton démarre désactivé ("Préparation du service…") tant que useBackendWarmup n'a
-  // pas confirmé que la chaîne frontend -> gateway -> auth répond — voir warmupHandler.
+  // pas confirmé que tous les services répondent — voir warmupHandlers.
   await waitFor(() => expect(screen.getByRole('button', { name: 'Se connecter' })).toBeInTheDocument())
   await user.type(screen.getByLabelText('Email'), 'a@a.com')
   await user.type(screen.getByLabelText('Mot de passe'), 'secret123')
   await user.click(screen.getByRole('button', { name: 'Se connecter' }))
 }
 
-const warmupHandler = http.get('/api/auth/me', () => new HttpResponse(null, { status: 401 }))
+// Un chemin par service réveillé par useBackendWarmup (auth/gateway + les 5 métier) : tous
+// à mocker pour que le réveil se débloque dans ces tests (voir WARMUP_PATHS dans le hook).
+const warmupHandlers = [
+  http.get('/api/auth/me', () => new HttpResponse(null, { status: 401 })),
+  http.get('/api/properties', () => HttpResponse.json([])),
+  http.get('/api/tenants', () => HttpResponse.json([])),
+  http.get('/api/leases', () => HttpResponse.json([])),
+  http.get('/api/payments', () => HttpResponse.json([])),
+  http.get('/api/documents', () => HttpResponse.json([])),
+]
 
 describe('LoginPage', () => {
   beforeEach(() => {
@@ -39,7 +48,7 @@ describe('LoginPage', () => {
 
   it("affiche le message d'identifiants incorrects sur une 401 classique (pas de compte à rebours)", async () => {
     const user = userEvent.setup()
-    server.use(warmupHandler, http.post('/api/auth/login', () => new HttpResponse(null, { status: 401 })))
+    server.use(...warmupHandlers, http.post('/api/auth/login', () => new HttpResponse(null, { status: 401 })))
 
     renderLoginPage()
     await fillAndSubmit(user)
@@ -53,7 +62,7 @@ describe('LoginPage', () => {
   it('sur une 429 (service Render endormi), bloque le bouton avec un compte à rebours plutôt qu\'un message d\'échec', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup()
-    server.use(warmupHandler, http.post('/api/auth/login', () => new HttpResponse(null, { status: 429 })))
+    server.use(...warmupHandlers, http.post('/api/auth/login', () => new HttpResponse(null, { status: 429 })))
 
     renderLoginPage()
     await fillAndSubmit(user)
@@ -71,7 +80,7 @@ describe('LoginPage', () => {
   })
 
   it('affiche le bouton bloqué en "Préparation du service…" le temps du réveil silencieux (useBackendWarmup), puis le débloque', async () => {
-    server.use(warmupHandler)
+    server.use(...warmupHandlers)
 
     renderLoginPage()
 
@@ -81,9 +90,9 @@ describe('LoginPage', () => {
     )
   })
 
-  it('affiche un message explicite si le réveil dépasse le délai maximal (Gateway/auth toujours indisponibles)', async () => {
+  it('affiche un message explicite si le réveil dépasse le délai maximal (un service toujours indisponible)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    server.use(http.get('/api/auth/me', () => new HttpResponse(null, { status: 502 })))
+    server.use(http.get('/api/auth/me', () => new HttpResponse(null, { status: 502 })), ...warmupHandlers)
 
     renderLoginPage()
 

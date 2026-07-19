@@ -58,7 +58,7 @@ describe('useServicesWarmup', () => {
     )
     const { result } = renderHook(() => useServicesWarmup(['/properties', '/tenants']))
 
-    await vi.advanceTimersByTimeAsync(151000)
+    await vi.advanceTimersByTimeAsync(181000)
     await waitFor(() => expect(result.current.isWarmingUp).toBe(false))
     expect(result.current.hasTimedOut).toBe(true)
   })
