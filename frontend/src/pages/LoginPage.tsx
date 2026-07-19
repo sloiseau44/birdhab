@@ -20,7 +20,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { secondsLeft, start } = useCooldown()
-  const { isWarmingUp } = useBackendWarmup()
+  const { isWarmingUp, hasTimedOut } = useBackendWarmup()
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -51,6 +51,9 @@ export function LoginPage() {
             <ErrorBanner
               message={`Le serveur se réveille après une période d'inactivité (offre gratuite) — réessaie dans ${secondsLeft}s.`}
             />
+          )}
+          {hasTimedOut && secondsLeft === 0 && (
+            <ErrorBanner message="Le serveur met plus de temps que prévu à démarrer (offre gratuite). Tu peux réessayer maintenant." />
           )}
           <Input
             label="Email"

@@ -19,6 +19,7 @@ describe('useBackendWarmup', () => {
     server.use(http.get('/api/auth/me', () => new HttpResponse(null, { status: 401 })))
     const { result } = renderHook(() => useBackendWarmup())
     await waitFor(() => expect(result.current.isWarmingUp).toBe(false))
+    expect(result.current.hasTimedOut).toBe(false)
   })
 
   it('reste bloqué tant que le backend répond 502/429, se débloque dès une vraie réponse', async () => {
@@ -42,12 +43,13 @@ describe('useBackendWarmup', () => {
     expect(attempt).toBeGreaterThanOrEqual(3)
   })
 
-  it('se débloque après le délai maximal même si le backend ne répond jamais correctement', async () => {
+  it('se débloque après le délai maximal, avec hasTimedOut, si le backend ne répond jamais correctement', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     server.use(http.get('/api/auth/me', () => new HttpResponse(null, { status: 502 })))
     const { result } = renderHook(() => useBackendWarmup())
 
-    await vi.advanceTimersByTimeAsync(61000)
+    await vi.advanceTimersByTimeAsync(181000)
     await waitFor(() => expect(result.current.isWarmingUp).toBe(false))
+    expect(result.current.hasTimedOut).toBe(true)
   })
 })

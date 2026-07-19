@@ -83,4 +83,19 @@ describe('RegisterPage', () => {
       expect(screen.getByRole('button', { name: 'Créer mon compte' })).not.toBeDisabled(),
     )
   })
+
+  it('affiche un message explicite si le réveil dépasse le délai maximal (Gateway/auth toujours indisponibles)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    server.use(http.get('/api/auth/me', () => new HttpResponse(null, { status: 502 })))
+
+    renderRegisterPage()
+
+    await vi.advanceTimersByTimeAsync(181000)
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Le serveur met plus de temps que prévu à démarrer (offre gratuite). Tu peux réessayer maintenant.',
+      ),
+    )
+    expect(screen.getByRole('button', { name: 'Créer mon compte' })).not.toBeDisabled()
+  })
 })
